@@ -2,9 +2,9 @@
 
 > Anima 动漫提示词生成器 · ComfyUI 自定义节点
 >
-> 风格库三段式 / 1000+ 画师库 / Danbooru 三类（画师 / 作品 IP / 角色 IP） + 实时风格预览图
+> 风格库三段式（52 条预设 / 15 分类）+ 1000+ 画师库 + Danbooru 四类（画师 / 作品 IP / 角色 IP / 风格·meta）+ Civitai 一键抓取 + 实时风格预览图
 
-[![version](https://img.shields.io/badge/version-1.0.0-blue.svg)]()
+[![version](https://img.shields.io/badge/version-1.2.0-blue.svg)]()
 [![ComfyUI](https://img.shields.io/badge/ComfyUI-custom_node-green.svg)](https://github.com/comfyanonymous/ComfyUI)
 [![license](https://img.shields.io/badge/license-MIT-lightgrey.svg)]()
 
@@ -16,9 +16,12 @@
 
 **核心特色**：
 
-- 🎨 **4 个素材库 Tab 一键切换**：mooshieblob 画师 + Danbooru 画师 / 作品 IP / 角色 IP
+- 📚 **风格库 52 条 Pony 兼容预设 × 15 分类**：画质 / 媒介 / 镜头 / 构图 / 光影 / 服装 / 表情 / 季节 / 时代 / 场景 / 风格 / 情绪 / 角色 / NSFW / 测试，开箱即用
+- 🌐 **一键 Civitai 抓取**：输入模型 ID 自动拉高赞图 prompt，按 14 组关键词自动归类（兼容 Civitai 直 prompt / 嵌套 / ComfyUI workflow 三种 meta 结构）
+- 🎨 **5 个素材库 Tab 一键切换**：mooshieblob 画师 + Danbooru 画师 / 作品 IP / 角色 IP / 风格·meta
 - 🖼️ **实时风格预览图**：选画师后运行节点即可在 PreviewImage 看到代表作首图
 - 🚀 **本地缓存 + 并发拉取**：首次切 Tab 仅 2~5 秒可用，后台异步补全 30000+ 标签
+- 🧬 **增量种子机制**：升级版本会按 name / title 增量补入新预设，**不覆盖**用户已编辑的内容
 - 📌 **Pin 收藏 / 仅固定 / A-Z 字母筛选 / 关键字搜索** 一应俱全
 - 🛡️ **图片代理**：所有 Danbooru CDN 图片走后端同源代理，绕开浏览器防盗链/CSP
 
@@ -69,11 +72,12 @@ pip install -r requirements.txt
 
 每个 Anima 节点上方都有按钮：
 
-- **📚 风格库**：浏览/搜索/收藏已保存的三段式提示词
-- **🎨 艺术家 / IP 库**：4 个 Tab 切换
+- **📚 风格库**：浏览/搜索/收藏已保存的三段式提示词，支持 📥 导入 / 📤 导出 / 🌐 Civitai 抓取
+- **🎨 艺术家 / IP 库**：5 个 Tab 切换
   - 👤 **Danbooru 画师** —— 30000+ Danbooru 真实标注画师标签
   - 📚 **作品 IP** —— 5000+ 动画/游戏/漫画作品名
   - 🧑‍🎤 **角色 IP** —— 30000+ 角色名
+  - 🎭 **风格·meta** —— Danbooru meta tag（画风 / 媒介 / 题材描述）
   - 🎨 **画师库·mooshieblob** —— 1000+ 精选画师 + 高质量预览图
 
 ### 3. 选择 → 添加
@@ -89,14 +93,24 @@ pip install -r requirements.txt
 
 > **小提示**：`PREVIEW_IMAGES` 仅展示"本次选中"的画师；`STYLE_PROMPT` 始终拼接 textarea 全部画师。如需预览全部，清空 `last_picked` widget 即可。
 
+### 5. 一键 Civitai 抓取（v1.2 新增）
+
+在风格库面板点 **🌐 Civitai** 按钮 → 输入目标模型 ID（例如 `2458426`）→ 系统会：
+
+1. 调 Civitai images API 拉该模型 Most Reactions × Month 的高赞图（默认 100 张，1 页）
+2. 自动从每张图的 meta 中提取 prompt（兼容直 prompt / 嵌套 meta / ComfyUI workflow 三种结构）
+3. 按 prompt 内容自动归类到 14 个分类（每条最多 3 个 tag）
+4. 按 reactions 倒序，取 top 30 增量写入风格库（标题 `Civitai-{modelId} #{imageId}`，按 title 去重）
+
 ---
 
 ## ⚙️ 数据来源
 
 | 来源 | 用途 |
 |---|---|
-| [Danbooru](https://danbooru.donmai.us) | 画师 / 作品 IP / 角色 IP 标签库 + 预览图首图 |
+| [Danbooru](https://danbooru.donmai.us) | 画师 / 作品 IP / 角色 IP / 风格·meta 标签库 + 预览图首图 |
 | [mooshieblob Anima Artist Gallery](https://anima.mooshieblob.com) | 1000+ 精选画师 + 高质量风格预览图 |
+| [Civitai](https://civitai.com) | 按模型 ID 抓取高赞图 prompt（公开 API，免 token） |
 
 所有数据按需缓存到本地 SQLite (`comfyui-anima-t8/data/anima_t8.sqlite`)，首次拉取后即离线可用。
 
@@ -110,11 +124,12 @@ pip install -r requirements.txt
 |---|---|
 | `GET /anima_t8/prompts` | 列出已保存的提示词预设 |
 | `GET /anima_t8/artists` | mooshieblob 画师列表 |
-| `GET /anima_t8/dtags?category=artist\|copyright\|character` | Danbooru 三类标签 |
+| `GET /anima_t8/dtags?category=artist\|copyright\|character\|meta` | Danbooru 四类标签（v1.2 加 meta） |
 | `GET /anima_t8/dtags/preview?name=xxx` | 拉取某 tag 的代表作首图 URL（带本地 LRU 4096 缓存） |
 | `GET /anima_t8/dtags/image?u=xxx` | **同源图片代理**（白名单 cdn.donmai.us / danbooru.donmai.us） |
 | `POST /anima_t8/dtags/refresh` | 强制刷新某 category 的标签库 |
 | `POST /anima_t8/artists/pin` | Pin / 取消 Pin 一个画师 |
+| `POST /anima_t8/civitai/refresh` | **v1.2** 按 model_id 抓取 Civitai 高赞图 prompt 并写入风格库 |
 
 ---
 
@@ -126,11 +141,14 @@ comfyui-anima-t8/
 ├── pyproject.toml           # 包元数据（v1.0.0）
 ├── requirements.txt         # Python 依赖
 ├── api/
-│   └── danbooru_client.py   # Danbooru 标签拉取（4 路并发）
+│   ├── danbooru_client.py   # Danbooru 标签拉取（4 路并发, 4 类: artist/copyright/character/meta）
+│   └── civitai_client.py    # v1.2 Civitai images API 客户端 + ComfyUI workflow 解析 + 自动归类
 ├── core/
 │   ├── db.py                # SQLite 自愈连接
 │   ├── artist_manager.py    # mooshieblob 画师管理
-│   └── danbooru_manager.py  # Danbooru 三类标签管理 + 预览图代理
+│   ├── danbooru_manager.py  # Danbooru 标签管理 + 预览图代理
+│   ├── tag_manager.py       # 风格库分类标签（增量种子）
+│   └── prompt_manager.py    # 风格库 prompt 预设（增量种子，按 title 去重）
 ├── nodes/
 │   ├── anima_prompt_node.py
 │   ├── anima_artist_node.py # Anima Artist Style T8（含 PREVIEW_IMAGES 输出）
@@ -181,6 +199,20 @@ comfyui-anima-t8/
 
 ## 📝 版本历史
 
+### v1.2.0 (2026-05)
+- ✨ **风格库扩充 12 → 52 条预设**，全部 Pony 兼容（开头 `score_9, score_8_up, score_7_up`）
+- ✨ **15 个分类**（新增：媒介 / 镜头 / 情绪 / 季节 / 时代）
+- ✨ **🌐 Civitai 一键抓取**：按 model_id 拉高赞图 prompt，自动按关键词归类
+  - 兼容 Civitai 三种 meta 结构（直 prompt / 嵌套 meta.meta / ComfyUI workflow）
+  - 14 组关键词自动分类（画质 / 媒介 / 光影 / 镜头 / 构图 / 服装 / 表情 / 季节 / 时代 / 场景 / 风格 / 情绪 / 角色 / NSFW），每条最多 3 个 tag
+- ✨ **🎭 风格·meta Tab**：新增 Danbooru meta category 拉取（CATEGORY_NAMES 加 5: meta）
+- 🧬 **增量种子机制**：`ensure_default_tags` / `ensure_default_prompts` 改按 name / title 去重，升级版本不覆盖用户已编辑的预设
+- 🔌 新路由 `POST /anima_t8/civitai/refresh`
+
+### v1.1.0 (2026-05)
+- 🔧 Anima Prompt T8 节点默认正向词追加 `score_9, score_8_up, score_7_up`
+- 🔧 艺术家库写入画师统一加 `@` 前缀，避免与作品 / 角色 IP 混淆
+
 ### v1.0.0 (2026-05)
 - ✨ 完整 4 Tab 素材库（mooshieblob + Danbooru 三类）
 - ✨ [Anima Artist Style T8](file:///f:/AnimaForge/comfyui-anima-t8/nodes/anima_artist_node.py) 新增 `PREVIEW_IMAGES` 输出，运行节点即出风格图
@@ -193,7 +225,7 @@ comfyui-anima-t8/
 
 ## 🙏 致谢
 
-- 数据来源：**[Danbooru](https://danbooru.donmai.us)** / **[mooshieblob Anima Artist Gallery](https://anima.mooshieblob.com)**
+- 数据来源：**[Danbooru](https://danbooru.donmai.us)** / **[mooshieblob Anima Artist Gallery](https://anima.mooshieblob.com)** / **[Civitai](https://civitai.com)**
 - 模型：**[circlestone-labs/Anima](https://huggingface.co/circlestone-labs/Anima)**
 - 平台：**[ComfyUI](https://github.com/comfyanonymous/ComfyUI)**
 
