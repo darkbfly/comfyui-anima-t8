@@ -1,0 +1,204 @@
+# comfyui-anima-t8
+
+> Anima 动漫提示词生成器 · ComfyUI 自定义节点
+>
+> 风格库三段式 / 1000+ 画师库 / Danbooru 三类（画师 / 作品 IP / 角色 IP） + 实时风格预览图
+
+[![version](https://img.shields.io/badge/version-1.0.0-blue.svg)]()
+[![ComfyUI](https://img.shields.io/badge/ComfyUI-custom_node-green.svg)](https://github.com/comfyanonymous/ComfyUI)
+[![license](https://img.shields.io/badge/license-MIT-lightgrey.svg)]()
+
+---
+
+## ✨ 简介
+
+**comfyui-anima-t8** 是为 [Anima 动漫文生图模型](https://huggingface.co/circlestone-labs/Anima) 设计的 ComfyUI 提示词工作站，把"风格库 + 画师库 + IP 库"完整搬进 ComfyUI 主面板，让你无需离开画布就能完成提示词组装。
+
+**核心特色**：
+
+- 🎨 **4 个素材库 Tab 一键切换**：mooshieblob 画师 + Danbooru 画师 / 作品 IP / 角色 IP
+- 🖼️ **实时风格预览图**：选画师后运行节点即可在 PreviewImage 看到代表作首图
+- 🚀 **本地缓存 + 并发拉取**：首次切 Tab 仅 2~5 秒可用，后台异步补全 30000+ 标签
+- 📌 **Pin 收藏 / 仅固定 / A-Z 字母筛选 / 关键字搜索** 一应俱全
+- 🛡️ **图片代理**：所有 Danbooru CDN 图片走后端同源代理，绕开浏览器防盗链/CSP
+
+---
+
+## 📦 节点清单
+
+| 节点 | 说明 | 主要输入 | 输出 |
+|---|---|---|---|
+| **Anima Prompt T8** | 三段式提示词组装（正向 / 负向 / 风格） | positive / negative / style | POSITIVE / NEGATIVE |
+| **Anima Artist Style T8** | 画师风格输出 + 实时预览 | artist_tags（多选）/ default_weight / use_artist_prefix | STYLE_PROMPT / **PREVIEW_IMAGES** |
+| **Anima Prompt Combiner T8** | 把多段提示词合并为单段 | text_a / text_b / separator | COMBINED |
+| **Anima Saved Prompt Loader T8** | 从风格库一键加载已保存提示词 | preset_id | POSITIVE / NEGATIVE / STYLE |
+
+---
+
+## 🚀 安装
+
+### 方式 1：手动 clone
+
+```bash
+cd ComfyUI/custom_nodes
+git clone https://github.com/T8mars/comfyui-anima-t8
+cd comfyui-anima-t8
+pip install -r requirements.txt
+```
+
+### 方式 2：通过 ComfyUI Manager
+
+在 ComfyUI Manager 搜索 `comfyui-anima-t8` 后一键安装（待发布到 manager 列表）。
+
+### 依赖
+
+- Python ≥ 3.10
+- ComfyUI 主分支（任意近期版本）
+- `Pillow` / `numpy` / `torch`（ComfyUI 自带，无需额外）
+- `requests`（已写入 `requirements.txt`）
+
+---
+
+## 🎯 使用流程
+
+### 1. 拖入节点
+
+在 ComfyUI 画布右键 → `Add Node` → `Anima/T8` → 选择需要的节点。
+
+### 2. 打开素材库
+
+每个 Anima 节点上方都有按钮：
+
+- **📚 风格库**：浏览/搜索/收藏已保存的三段式提示词
+- **🎨 艺术家 / IP 库**：4 个 Tab 切换
+  - 👤 **Danbooru 画师** —— 30000+ Danbooru 真实标注画师标签
+  - 📚 **作品 IP** —— 5000+ 动画/游戏/漫画作品名
+  - 🧑‍🎤 **角色 IP** —— 30000+ 角色名
+  - 🎨 **画师库·mooshieblob** —— 1000+ 精选画师 + 高质量预览图
+
+### 3. 选择 → 添加
+
+- 在卡片上点击 → 进入选中状态
+- 点击右上角"➜ 添加 N 个" → 自动写入对应节点的 widget
+  - 画师类 → 写入 `artist_tags` widget（[Anima Artist Style T8](file:///f:/AnimaForge/comfyui-anima-t8/nodes/anima_artist_node.py)）或 `style` widget（Anima Prompt T8）
+  - 作品 / 角色 IP → 写入 `positive` widget
+
+### 4. 运行查看预览
+
+把 [Anima Artist Style T8](file:///f:/AnimaForge/comfyui-anima-t8/nodes/anima_artist_node.py) 的 `PREVIEW_IMAGES` 端口连到 `PreviewImage` 节点，运行后会自动从 Danbooru 拉每个画师的代表作首图（≤16 张，6 路并发，约 2~5 秒）。
+
+> **小提示**：`PREVIEW_IMAGES` 仅展示"本次选中"的画师；`STYLE_PROMPT` 始终拼接 textarea 全部画师。如需预览全部，清空 `last_picked` widget 即可。
+
+---
+
+## ⚙️ 数据来源
+
+| 来源 | 用途 |
+|---|---|
+| [Danbooru](https://danbooru.donmai.us) | 画师 / 作品 IP / 角色 IP 标签库 + 预览图首图 |
+| [mooshieblob Anima Artist Gallery](https://anima.mooshieblob.com) | 1000+ 精选画师 + 高质量风格预览图 |
+
+所有数据按需缓存到本地 SQLite (`comfyui-anima-t8/data/anima_t8.sqlite`)，首次拉取后即离线可用。
+
+---
+
+## 🔌 HTTP 路由
+
+节点会自动注册以下路由到 ComfyUI 服务器：
+
+| 路径 | 说明 |
+|---|---|
+| `GET /anima_t8/prompts` | 列出已保存的提示词预设 |
+| `GET /anima_t8/artists` | mooshieblob 画师列表 |
+| `GET /anima_t8/dtags?category=artist\|copyright\|character` | Danbooru 三类标签 |
+| `GET /anima_t8/dtags/preview?name=xxx` | 拉取某 tag 的代表作首图 URL（带本地 LRU 4096 缓存） |
+| `GET /anima_t8/dtags/image?u=xxx` | **同源图片代理**（白名单 cdn.donmai.us / danbooru.donmai.us） |
+| `POST /anima_t8/dtags/refresh` | 强制刷新某 category 的标签库 |
+| `POST /anima_t8/artists/pin` | Pin / 取消 Pin 一个画师 |
+
+---
+
+## 🗂️ 项目结构
+
+```
+comfyui-anima-t8/
+├── __init__.py              # ComfyUI 节点注册入口
+├── pyproject.toml           # 包元数据（v1.0.0）
+├── requirements.txt         # Python 依赖
+├── api/
+│   └── danbooru_client.py   # Danbooru 标签拉取（4 路并发）
+├── core/
+│   ├── db.py                # SQLite 自愈连接
+│   ├── artist_manager.py    # mooshieblob 画师管理
+│   └── danbooru_manager.py  # Danbooru 三类标签管理 + 预览图代理
+├── nodes/
+│   ├── anima_prompt_node.py
+│   ├── anima_artist_node.py # Anima Artist Style T8（含 PREVIEW_IMAGES 输出）
+│   ├── anima_combiner_node.py
+│   └── anima_loader_node.py
+├── server/
+│   └── routes.py            # aiohttp 路由（含图片代理 + 后台补全）
+└── web/                     # 前端注入到 ComfyUI 主面板
+    ├── anima_t8.js          # 入口扩展
+    ├── api.js               # 前端 API 封装
+    ├── components/
+    │   ├── prompt_panel.js  # 风格库面板
+    │   ├── artist_gallery.js # 4 Tab 画师 / IP 画廊
+    │   └── tag_chip.js
+    └── styles/
+        └── anima_t8.css
+```
+
+---
+
+## 🧠 设计要点
+
+### 首屏快速 + 后台补全
+
+切到 Danbooru 任一 Tab 时：
+
+1. 后端先拉前 2 页（~2000 条）立即返回，前端 2~5 秒可用
+2. 同时启动后台 `fetch(force_refresh=True, max_pages=30)` 4 路并发补全
+3. 响应附带 `backfilling: true` 标记 → 前端显示"· 后台补全中…"，并在 8s 后自动重拉
+4. 第二次进入相同 Tab → 直接从 SQLite 秒开
+
+### 浏览器兼容的图片代理
+
+直连 `cdn.donmai.us` 在某些网络/扩展环境下会被拦截（防盗链 / CSP / 本地拦截器），所有 Danbooru 图片统一走 `/anima_t8/dtags/image?u=...` 后端同源代理：
+
+- SSRF 防护：仅允许 `cdn.donmai.us` / `danbooru.donmai.us`
+- Referer 头：`https://danbooru.donmai.us/` 绕过防盗链
+- HTTP 缓存：`Cache-Control: public, max-age=86400`
+
+### "本次选中"语义
+
+[Anima Artist Style T8](file:///f:/AnimaForge/comfyui-anima-t8/nodes/anima_artist_node.py) 的 `artist_tags` 是累积式 textarea（保留历史选择），但 `PREVIEW_IMAGES` 应该只反映本次操作。解决方案：
+
+- 新增隐藏 `last_picked` widget，每次"添加选中"前端覆盖式写入
+- 节点 `build()` 优先用 `last_picked`，为空才退回 `artist_tags` 全部
+
+---
+
+## 📝 版本历史
+
+### v1.0.0 (2026-05)
+- ✨ 完整 4 Tab 素材库（mooshieblob + Danbooru 三类）
+- ✨ [Anima Artist Style T8](file:///f:/AnimaForge/comfyui-anima-t8/nodes/anima_artist_node.py) 新增 `PREVIEW_IMAGES` 输出，运行节点即出风格图
+- ✨ 后端图片代理 + 4 路并发标签拉取 + 首屏 2 页快速返回
+- ✨ Pin 收藏 / A-Z 字母筛选 / 关键字搜索 / 仅固定模式
+- 🛡️ SQLite 自愈机制（损坏自动重建）
+- 🛡️ SSRF 白名单 + Referer 头绕开防盗链
+
+---
+
+## 🙏 致谢
+
+- 数据来源：**[Danbooru](https://danbooru.donmai.us)** / **[mooshieblob Anima Artist Gallery](https://anima.mooshieblob.com)**
+- 模型：**[circlestone-labs/Anima](https://huggingface.co/circlestone-labs/Anima)**
+- 平台：**[ComfyUI](https://github.com/comfyanonymous/ComfyUI)**
+
+---
+
+## 📜 License
+
+MIT © 2026 T8mars

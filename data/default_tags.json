@@ -1,0 +1,12 @@
+[
+  { "name": "角色", "color": "#FF6B9D" },
+  { "name": "场景", "color": "#5B8DEF" },
+  { "name": "构图", "color": "#36CFC9" },
+  { "name": "风格", "color": "#9D5BEF" },
+  { "name": "光影", "color": "#FFB454" },
+  { "name": "服装", "color": "#EF5B7E" },
+  { "name": "表情", "color": "#54C570" },
+  { "name": "画质", "color": "#7A8DEF" },
+  { "name": "NSFW", "color": "#D64545" },
+  { "name": "测试", "color": "#8aa0bf" }
+]

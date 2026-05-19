@@ -1,0 +1,233 @@
+"""Anima Artist Style T8 节点：选择艺术家并按权重格式化输出。
+
+额外输出：PREVIEW_IMAGES (IMAGE)
+    并发从 Danbooru posts.json 拉每个 tag 的代表作首图，拼成 batch tensor。
+    可接到 PreviewImage 节点查看当前选中画师 / IP 的风格预览。
+"""
+
+import io
+import json
+import urllib.parse
+import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import List, Optional
+
+DANBOORU_BASE = "https://danbooru.donmai.us"
+_USER_AGENT = "comfyui-anima-t8/1.0"
+_PREVIEW_W, _PREVIEW_H = 512, 768  # 输出预览图统一尺寸
+
+
+def _fetch_preview_pil(name: str, timeout: float = 8.0):
+    """从 Danbooru 拉一个 tag 的代表作首图，返回 PIL.Image 或 None。"""
+    try:
+        from PIL import Image  # 延迟导入，避免节点加载时依赖错误
+    except ImportError:
+        print("[anima_t8] Pillow 未安装，无法生成预览图")
+        return None
+    tag_q = urllib.parse.quote(name, safe=":/_")
+    api = f"{DANBOORU_BASE}/posts.json?tags={tag_q}&limit=1"
+    try:
+        req = urllib.request.Request(api, headers={"User-Agent": _USER_AGENT})
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8", errors="ignore"))
+        if not isinstance(data, list) or not data:
+            return None
+        p = data[0]
+        img_url = (p.get("large_file_url") or p.get("preview_file_url")
+                   or p.get("file_url") or "")
+        if not img_url:
+            return None
+        req2 = urllib.request.Request(img_url, headers={
+            "User-Agent": _USER_AGENT,
+            "Referer": "https://danbooru.donmai.us/",
+        })
+        with urllib.request.urlopen(req2, timeout=timeout * 2) as resp:
+            buf = resp.read()
+        return Image.open(io.BytesIO(buf)).convert("RGB")
+    except Exception as e:
+        print(f"[anima_t8] preview fetch fail name={name}: {e}")
+        return None
+
+
+class AnimaArtistStyleT8:
+    """艺术家风格输出节点。
+
+    输入多个 artist_tags，可用 **逗号** 或 **换行** 分隔（两者可混用），
+    每个项为一个 slug 或 tag，可附 `:weight`。
+    例如：
+        wlop:1.1, hiten, (artist:somebody:0.9)
+    输出按 ComfyUI 权重格式 `(artist:slug:weight)` 拼接。
+    """
+
+    CATEGORY = "Anima/T8"
+    FUNCTION = "build"
+    RETURN_TYPES = ("STRING", "IMAGE")
+    RETURN_NAMES = ("STYLE_PROMPT", "PREVIEW_IMAGES")
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "artist_tags": ("STRING", {
+                    "multiline": True,
+                    "default": "",
+                    "placeholder": "逗号或换行分隔多个画师。例：wlop:1.1, hiten。也可点击节点上方按钮打开艺术家库选择。",
+                }),
+                "default_weight": ("FLOAT", {
+                    "default": 1.0, "min": 0.1, "max": 2.0, "step": 0.05,
+                }),
+                "use_artist_prefix": ("BOOLEAN", {"default": True}),
+            },
+            "optional": {
+                # 本次从艺术家库“添加选中”的画师名列表（逗号或换行分隔）。
+                # 运行时 PREVIEW_IMAGES 仅对该列表拉预览图；为空时退回到 artist_tags 全部。
+                "last_picked": ("STRING", {
+                    "multiline": True,
+                    "default": "",
+                    "placeholder": "本次选中的画师（点击“添加选中”时自动填充，为空则预览 artist_tags 全部）",
+                }),
+            },
+        }
+
+    def build(self, artist_tags: str, default_weight: float = 1.0,
+              use_artist_prefix: bool = True, last_picked: str = ""):
+        out: List[str] = []
+        names: List[str] = []  # 去权重去括号后的纯 name，用于拉预览图
+        # 允许逗号与换行混用：先切行，再按逗号拆分
+        raw_tokens = []
+        for ln in (artist_tags or "").splitlines():
+            for piece in ln.split(","):
+                raw_tokens.append(piece)
+        for raw in raw_tokens:
+            line = raw.strip().strip(",")
+            if not line:
+                continue
+            # 已带括号的整体直接保留
+            if line.startswith("(") and line.endswith(")"):
+                out.append(line)
+                # 从括号里提取 name（剩馆错误容忍）
+                inner = line.strip("()").strip()
+                if inner.startswith("artist:"):
+                    inner = inner[len("artist:"):]
+                if ":" in inner:
+                    inner = inner.rsplit(":", 1)[0].strip()
+                if inner:
+                    names.append(inner)
+                continue
+            # 拆 weight
+            if ":" in line:
+                parts = line.rsplit(":", 1)
+                name = parts[0].strip()
+                try:
+                    w = float(parts[1])
+                except ValueError:
+                    name = line
+                    w = default_weight
+            else:
+                name = line
+                w = default_weight
+
+            name = name.replace("(artist:", "").rstrip(")").strip()
+            if not name:
+                continue
+            names.append(name)
+
+            prefix = "artist:" if use_artist_prefix else ""
+            if abs(w - 1.0) < 1e-3:
+                out.append(f"({prefix}{name})" if use_artist_prefix else name)
+            else:
+                out.append(f"({prefix}{name}:{w:.2f})")
+
+        prompt = ", ".join(out)
+        # 预览图只对“本次选中”拉；为空才退回到 artist_tags 全部
+        preview_names = self._parse_names(last_picked) if (last_picked or "").strip() else names
+        preview = self._build_preview_tensor(preview_names)
+        return (prompt, preview)
+
+    @staticmethod
+    def _parse_names(text: str) -> List[str]:
+        """从逗号 / 换行分隔的文本里提取纯 name 列表（去权重去括号）。"""
+        out: List[str] = []
+        for ln in (text or "").splitlines():
+            for piece in ln.split(","):
+                t = piece.strip().strip(",")
+                if not t:
+                    continue
+                if t.startswith("(") and t.endswith(")"):
+                    t = t.strip("()").strip()
+                    if t.startswith("artist:"):
+                        t = t[len("artist:"):]
+                if ":" in t:
+                    t = t.rsplit(":", 1)[0].strip()
+                t = t.replace("(artist:", "").rstrip(")").strip()
+                if t:
+                    out.append(t)
+        return out
+
+    # ------------------------------------------------------------------
+    # 预览图拼装
+    # ------------------------------------------------------------------
+    def _build_preview_tensor(self, names: List[str]):
+        """并发拉取所有 name 的首图并拼成 [B,H,W,3] tensor。"""
+        try:
+            import numpy as np
+            import torch
+            from PIL import Image
+        except ImportError as e:
+            print(f"[anima_t8] preview 依赖缺失: {e}")
+            import torch
+            return torch.zeros((1, 64, 64, 3), dtype=torch.float32)
+
+        if not names:
+            return torch.zeros((1, 64, 64, 3), dtype=torch.float32)
+
+        # 去重（保持输入顺序）
+        seen = set()
+        uniq_names = []
+        for n in names:
+            if n not in seen:
+                seen.add(n)
+                uniq_names.append(n)
+
+        # 限制最多 16 张，避免选太多时超时
+        if len(uniq_names) > 16:
+            print(f"[anima_t8] preview limit 16/{len(uniq_names)}")
+            uniq_names = uniq_names[:16]
+
+        results: List[Optional[Image.Image]] = [None] * len(uniq_names)
+        with ThreadPoolExecutor(max_workers=min(6, len(uniq_names))) as ex:
+            fut_map = {ex.submit(_fetch_preview_pil, n): i
+                       for i, n in enumerate(uniq_names)}
+            for fut in as_completed(fut_map):
+                idx = fut_map[fut]
+                try:
+                    results[idx] = fut.result()
+                except Exception as e:
+                    print(f"[anima_t8] preview thread fail: {e}")
+
+        valid = [im for im in results if im is not None]
+        if not valid:
+            print("[anima_t8] no preview images fetched")
+            return torch.zeros((1, 64, 64, 3), dtype=torch.float32)
+
+        arr_list = []
+        for im in valid:
+            try:
+                im2 = im.resize((_PREVIEW_W, _PREVIEW_H), Image.LANCZOS)
+                arr = np.array(im2, dtype=np.float32) / 255.0
+                if arr.ndim == 2:  # 灰度补 3 通道
+                    arr = np.stack([arr, arr, arr], axis=-1)
+                if arr.shape[-1] == 4:  # 丢掉 alpha
+                    arr = arr[..., :3]
+                arr_list.append(arr)
+            except Exception as e:
+                print(f"[anima_t8] preview convert fail: {e}")
+        if not arr_list:
+            return torch.zeros((1, 64, 64, 3), dtype=torch.float32)
+        tensor = torch.from_numpy(np.stack(arr_list, axis=0))
+        print(f"[anima_t8] preview built {tensor.shape}")
+        return tensor
+
+
+NODE_CLASS_MAPPINGS = {"AnimaArtistStyleT8": AnimaArtistStyleT8}
+NODE_DISPLAY_NAME_MAPPINGS = {"AnimaArtistStyleT8": "Anima Artist Style T8"}

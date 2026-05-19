@@ -1,0 +1,198 @@
+/* comfyui-anima-t8 前端样式：二次元蓝白主题 */
+
+.anima-t8-mask {
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(3px);
+    display: flex; align-items: stretch; justify-content: flex-end;
+    font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+}
+.anima-t8-panel {
+    width: min(960px, 92vw);
+    height: 100vh;
+    background: linear-gradient(180deg, #f7fbff 0%, #eef4fb 100%);
+    color: #1f2c3d;
+    box-shadow: -8px 0 32px rgba(0,0,0,0.3);
+    display: flex; flex-direction: column;
+    animation: anima-slide-in 0.18s ease-out;
+}
+@keyframes anima-slide-in { from { transform: translateX(40px); opacity: 0;} to { transform: translateX(0); opacity: 1;} }
+
+.anima-t8-header {
+    padding: 14px 20px; border-bottom: 1px solid #d6e4f5;
+    display: flex; align-items: center; gap: 12px;
+    background: linear-gradient(90deg, #5b8def 0%, #8ab8ff 100%);
+    color: white;
+}
+.anima-t8-header h2 { font-size: 18px; margin: 0; flex: 1; font-weight: 600; }
+.anima-t8-header .anima-t8-tabs { display: flex; gap: 4px; }
+.anima-t8-header .anima-t8-tabs button {
+    padding: 6px 14px; border: none; border-radius: 16px;
+    background: rgba(255,255,255,0.2); color: white; cursor: pointer;
+    font-size: 13px;
+}
+.anima-t8-header .anima-t8-tabs button.active {
+    background: white; color: #5b8def; font-weight: 600;
+}
+.anima-t8-header .anima-t8-close {
+    background: none; border: none; color: white; font-size: 22px;
+    cursor: pointer; line-height: 1; padding: 0 6px;
+}
+
+.anima-t8-body { flex: 1; overflow: hidden; display: flex; }
+.anima-t8-side { width: 220px; border-right: 1px solid #d6e4f5; padding: 12px; overflow-y: auto; }
+.anima-t8-main { flex: 1; padding: 16px; overflow-y: auto; }
+
+.anima-t8-toolbar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.anima-t8-input {
+    flex: 1; min-width: 180px;
+    padding: 8px 12px; border: 1px solid #c8d8ee; border-radius: 8px;
+    background: white; font-size: 13px; color: #1f2c3d; outline: none;
+}
+.anima-t8-input:focus { border-color: #5b8def; box-shadow: 0 0 0 3px rgba(91,141,239,0.15); }
+.anima-t8-btn {
+    padding: 7px 14px; border: 1px solid #c8d8ee; border-radius: 8px;
+    background: white; color: #1f2c3d; cursor: pointer; font-size: 13px;
+    transition: all 0.15s;
+}
+.anima-t8-btn:hover { background: #eaf2ff; border-color: #5b8def; }
+.anima-t8-btn.primary { background: #5b8def; color: white; border-color: #5b8def; }
+.anima-t8-btn.primary:hover { background: #4070d9; }
+.anima-t8-btn.danger { color: #d64545; }
+.anima-t8-btn.danger:hover { background: #fde8e8; border-color: #d64545; }
+
+.anima-t8-card {
+    background: white; border: 1px solid #d6e4f5; border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 10px;
+    transition: box-shadow 0.15s, transform 0.15s;
+    position: relative;
+}
+.anima-t8-card:hover { box-shadow: 0 4px 14px rgba(91,141,239,0.18); }
+.anima-t8-card.pinned { border-left: 4px solid #ff6b9d; }
+.anima-t8-card .anima-t8-card-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+.anima-t8-card .anima-t8-card-desc { font-size: 12px; color: #5a6b80; line-height: 1.5; max-height: 3em; overflow: hidden; }
+.anima-t8-card .anima-t8-card-actions {
+    display: flex; gap: 6px; margin-top: 10px;
+}
+.anima-t8-card .anima-t8-card-actions .anima-t8-btn { padding: 4px 10px; font-size: 12px; }
+
+.anima-t8-tag-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 10px; border-radius: 12px;
+    font-size: 11px; color: white; margin-right: 4px; margin-bottom: 4px;
+    cursor: pointer; user-select: none;
+}
+.anima-t8-tag-chip.outline { background: white !important; border: 1px solid currentColor; }
+
+.anima-t8-empty {
+    text-align: center; padding: 40px 20px; color: #8aa0bf; font-size: 13px;
+}
+
+.anima-t8-editor { display: flex; flex-direction: column; gap: 12px; }
+.anima-t8-editor label { font-size: 12px; color: #5a6b80; font-weight: 600; }
+.anima-t8-editor textarea {
+    width: 100%; box-sizing: border-box;
+    padding: 10px 12px; border: 1px solid #c8d8ee; border-radius: 8px;
+    background: white; font-family: ui-monospace, "Cascadia Code", monospace;
+    font-size: 12px; line-height: 1.6; color: #1f2c3d;
+    resize: vertical; min-height: 80px; outline: none;
+}
+.anima-t8-editor textarea:focus { border-color: #5b8def; }
+
+.anima-t8-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+    grid-auto-rows: max-content;
+    align-items: start;
+}
+.anima-t8-artist-card {
+    background: white; border: 1px solid #d6e4f5; border-radius: 10px;
+    overflow: hidden; cursor: pointer; position: relative;
+    transition: transform 0.15s, box-shadow 0.15s;
+    align-self: start;
+}
+.anima-t8-artist-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(91,141,239,0.22); }
+.anima-t8-artist-card.pinned { border-color: #ff6b9d; box-shadow: 0 0 0 1px #ff6b9d; }
+.anima-t8-artist-card .anima-t8-art-img {
+    width: 100%; height: auto; display: block;
+    background: #e8eef7;
+    object-fit: contain;
+    max-height: 340px;
+}
+.anima-t8-artist-card .anima-t8-art-img.placeholder {
+    aspect-ratio: 3 / 4;
+    background: linear-gradient(135deg, #eaf2ff 0%, #f7e8f1 100%);
+}
+.anima-t8-artist-card .anima-t8-art-img.err {
+    aspect-ratio: 3 / 4;
+    background: repeating-linear-gradient(45deg, #ffe2e8, #ffe2e8 6px, #ffd0d8 6px, #ffd0d8 12px);
+    position: relative;
+}
+.anima-t8-artist-card .anima-t8-art-img.err::after {
+    content: "⚠⚠⚠ 预览失败";
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: #b03050; font-weight: 600;
+}
+/* img 是替换元素伪元素不生效，同时在 card 上贴上提示 */
+.anima-t8-artist-card.err .anima-t8-art-img {
+    background: repeating-linear-gradient(45deg, #ffe2e8, #ffe2e8 6px, #ffd0d8 6px, #ffd0d8 12px);
+}
+.anima-t8-artist-card.err::before {
+    content: "⚠";
+    position: absolute; top: 6px; left: 6px;
+    z-index: 2; font-size: 14px; color: #b03050;
+    background: white; border-radius: 50%; width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.anima-t8-artist-card .anima-t8-art-info {
+    padding: 6px 8px;
+}
+.anima-t8-artist-card .anima-t8-art-slug { font-size: 12px; font-weight: 600; color: #1f2c3d; word-break: break-all; }
+.anima-t8-artist-card .anima-t8-art-count { font-size: 10px; color: #8aa0bf; }
+.anima-t8-artist-card .anima-t8-pin-btn {
+    position: absolute; top: 4px; right: 4px;
+    width: 24px; height: 24px; border-radius: 50%; border: none;
+    background: rgba(0,0,0,0.5); color: white; cursor: pointer;
+    font-size: 12px;
+}
+.anima-t8-artist-card .anima-t8-pin-btn.on { background: #ff6b9d; }
+
+.anima-t8-preview-mask {
+    position: fixed; inset: 0; z-index: 10001;
+    background: rgba(0,0,0,0.85); display: flex;
+    align-items: center; justify-content: center;
+}
+.anima-t8-preview-box {
+    background: white; padding: 12px; border-radius: 12px;
+    max-width: 90vw; max-height: 90vh; display: flex; flex-direction: column; gap: 8px;
+}
+.anima-t8-preview-box img { max-width: 80vw; max-height: 70vh; border-radius: 8px; }
+.anima-t8-preview-box .anima-t8-preview-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+.anima-t8-side h4 { font-size: 12px; color: #5a6b80; margin: 8px 0 4px 4px; }
+.anima-t8-side .anima-t8-side-item {
+    padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 13px;
+    margin-bottom: 2px;
+}
+.anima-t8-side .anima-t8-side-item:hover { background: rgba(91,141,239,0.1); }
+.anima-t8-side .anima-t8-side-item.active { background: #5b8def; color: white; }
+
+.anima-t8-toast {
+    position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%);
+    background: #1f2c3d; color: white; padding: 10px 20px; border-radius: 22px;
+    z-index: 10010; font-size: 13px; box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+}
+
+.anima-t8-row { display: flex; gap: 8px; align-items: center; }
+.anima-t8-row > * { flex-shrink: 0; }
+.anima-t8-row > .anima-t8-flex1 { flex: 1; min-width: 0; }
+
+/* ComfyUI 节点上的 Anima 按钮 */
+.anima-t8-node-btn {
+    margin-top: 4px; padding: 6px 10px; border-radius: 6px;
+    border: 1px solid #5b8def; background: linear-gradient(90deg, #5b8def, #8ab8ff);
+    color: white; cursor: pointer; font-size: 12px; font-weight: 600;
+    width: 100%; box-sizing: border-box;
+}
+.anima-t8-node-btn:hover { filter: brightness(1.1); }

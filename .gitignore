@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+# 本地数据缓存（用户运行时生成）
+data/*.sqlite
+data/*.sqlite-journal
+data/*.sqlite-wal
+data/*.sqlite-shm
+data/*.db
+data/*.db-journal
+
+# 调试 / 测试临时文件
+_dbg.py
+_smoke_*.py
+_smoke_*.log
+_smoke_out.txt
+_out.log
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db

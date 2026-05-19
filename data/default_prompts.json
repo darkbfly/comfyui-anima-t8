@@ -1,0 +1,98 @@
+[
+  {
+    "title": "动漫默认",
+    "description": "标准动漫风格，高质量设置",
+    "positive_prompt": "masterpiece, best quality, highly detailed, anime style, beautiful face, detailed eyes, vibrant colors",
+    "artist_prompt": "",
+    "is_pinned": true,
+    "tag_names": ["画质", "风格"]
+  },
+  {
+    "title": "可爱动漫",
+    "description": "可爱卡哇伊动漫女孩风格",
+    "positive_prompt": "masterpiece, best quality, 1girl, cute, kawaii, smile, blush, big eyes, pastel colors, soft lighting, detailed face, colorful",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["角色", "风格"]
+  },
+  {
+    "title": "暗黑动漫",
+    "description": "暗黑哥特动漫风格",
+    "positive_prompt": "masterpiece, best quality, dark theme, gothic, dramatic lighting, detailed shadows, anime style, mysterious atmosphere",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["风格", "光影"]
+  },
+  {
+    "title": "写实人像",
+    "description": "照片级真实人像风格",
+    "positive_prompt": "masterpiece, best quality, photorealistic, ultra detailed, professional photography, studio lighting, 8k, raw photo, dslr",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["角色", "光影"]
+  },
+  {
+    "title": "写实风景",
+    "description": "照片级真实风景风格",
+    "positive_prompt": "masterpiece, best quality, photorealistic, landscape, nature, ultra detailed, 8k uhd, dslr, high quality, natural lighting, scenic",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["场景", "光影"]
+  },
+  {
+    "title": "水彩画",
+    "description": "柔和水彩画风格",
+    "positive_prompt": "masterpiece, best quality, watercolor painting, soft colors, artistic, flowing, dreamy, delicate brushstrokes, paper texture",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["风格"]
+  },
+  {
+    "title": "像素艺术",
+    "description": "复古像素游戏风格",
+    "positive_prompt": "masterpiece, pixel art, 16bit, retro game style, clean pixels, detailed sprite, vibrant colors, nostalgic",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["风格"]
+  },
+  {
+    "title": "油画",
+    "description": "古典油画风格",
+    "positive_prompt": "masterpiece, best quality, oil painting, rich colors, thick brushstrokes, canvas texture, classical art, dramatic lighting",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["风格"]
+  },
+  {
+    "title": "赛博朋克",
+    "description": "霓虹灯赛博朋克风格",
+    "positive_prompt": "masterpiece, best quality, cyberpunk, neon lights, futuristic city, rain, dark atmosphere, high tech, blade runner style",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["场景", "风格"]
+  },
+  {
+    "title": "奇幻艺术",
+    "description": "史诗奇幻艺术风格",
+    "positive_prompt": "masterpiece, best quality, fantasy art, magical, ethereal, detailed, epic, dramatic lighting, mystical atmosphere",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["风格"]
+  },
+  {
+    "title": "Q版",
+    "description": "可爱Q版超变形风格",
+    "positive_prompt": "masterpiece, best quality, chibi, super deformed, cute, small body, big head, kawaii, simple, adorable",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["角色", "风格"]
+  },
+  {
+    "title": "吉卜力风格",
+    "description": "吉卜力工作室风格",
+    "positive_prompt": "masterpiece, best quality, studio ghibli style, miyazaki, watercolor background, detailed nature, warm colors, peaceful, whimsical",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["风格"]
+  }
+]
