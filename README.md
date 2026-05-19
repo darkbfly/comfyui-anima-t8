@@ -1,3 +1,13 @@
+# 网站：[https://ai.t8star.org](https://ai.t8star.org/register?aff=cbff0534884)
+# Online workflow overseas：
+https://www.runninghub.ai/?inviteCode=rh-v1121
+# 在线工作流国内版：
+https://www.runninghub.cn/?inviteCode=rh-v1121
+# 👋🏻 Welcome to Zhenzhen
+
+<img src="https://github.com/T8mars/Comfyui-zhenzhen/blob/main/pic/1.png" width="30%" alt="My favorite girl">
+My favorite girl Go YounJung
+
 # comfyui-anima-t8
 
 > Anima 动漫提示词生成器 · ComfyUI 自定义节点
