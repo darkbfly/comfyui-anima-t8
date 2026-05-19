@@ -11,11 +11,13 @@ try:
     from core.artist_manager import get_artist_manager
     from core.danbooru_manager import get_danbooru_manager
     from core.db import DEFAULT_NEGATIVE_PROMPT
+    from api import civitai_client
 except Exception:
     from ..core import prompt_manager, tag_manager
     from ..core.artist_manager import get_artist_manager
     from ..core.danbooru_manager import get_danbooru_manager
     from ..core.db import DEFAULT_NEGATIVE_PROMPT
+    from ..api import civitai_client
 
 
 def _ok(data=None):
@@ -96,6 +98,99 @@ def register_routes():
     async def pin_prompt(request: web.Request):
         data = prompt_manager.toggle_pin(request.match_info["pid"])
         return _ok(data) if data else _err("not found", 404)
+
+    @routes.post("/anima_t8/civitai/refresh")
+    async def refresh_from_civitai(request: web.Request):
+        """从 Civitai 拉取指定模型高赞图 meta，按 title 增量写入 prompts 表。
+
+        body 参数：
+            model_id (int, 必需)
+            sort     (str, 默认 'Most Reactions')
+            period   (str, 默认 'Month')
+            nsfw     (str, 'None'/'Soft'/'Mature'/'X')
+            limit    (int, 默认 100，最大 200)
+            max_pages(int, 默认 1)
+            top_n    (int, 默认 30，只取点赞最高的前 N 张写入)
+            tag_names(list, 默认 ['风格']，给生成的模板打上的分类)
+            title_prefix (str, 默认 'Civitai-{model_id}')
+            token    (str, 选填，拉 NSFW=X 需要)
+        """
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        model_id = body.get("model_id") or body.get("modelId")
+        if not model_id:
+            return _err("model_id required")
+        try:
+            model_id = int(model_id)
+        except Exception:
+            return _err("model_id must be int")
+
+        sort = body.get("sort") or "Most Reactions"
+        period = body.get("period") or "Month"
+        nsfw = body.get("nsfw") or "None"
+        limit = int(body.get("limit") or 100)
+        max_pages = int(body.get("max_pages") or 1)
+        top_n = int(body.get("top_n") or 30)
+        tag_names = body.get("tag_names") or ["风格"]
+        title_prefix = body.get("title_prefix")
+        token = body.get("token") or None
+
+        loop = request.app.loop
+        try:
+            templates = await loop.run_in_executor(
+                None,
+                lambda: civitai_client.fetch_templates_from_model(
+                    model_id,
+                    sort=sort, period=period, nsfw=nsfw,
+                    limit=limit, max_pages=max_pages,
+                    title_prefix=title_prefix,
+                    default_tag_names=tag_names,
+                    token=token,
+                ),
+            )
+        except Exception as e:
+            import traceback; traceback.print_exc()
+            return _err("Civitai 拉取失败：" + str(e), 502)
+
+        # 限 top_n + 依赖 prompt_manager 里同名 title 增量逻辑手工实现
+        templates = templates[:max(0, top_n)]
+        from core.db import get_db as _get_db
+        try:
+            db = _get_db()
+        except Exception:
+            from ..core.db import get_db as _get_db2  # type: ignore
+            db = _get_db2()
+        existing_titles = {r["title"] for r in db.fetchall("SELECT title FROM prompts")}
+        tag_rows = db.fetchall("SELECT id, name FROM tags")
+        tag_map = {r["name"]: r["id"] for r in tag_rows}
+
+        added = 0
+        for t in templates:
+            title = t.get("title") or ""
+            if not title or title in existing_titles:
+                continue
+            names = t.get("tag_names") or []
+            tag_ids = [tag_map[n] for n in names if n in tag_map]
+            prompt_manager.upsert_prompt({
+                "title": title,
+                "description": t.get("description", ""),
+                "positive_prompt": t.get("positive_prompt", ""),
+                "negative_prompt": t.get("negative_prompt") or DEFAULT_NEGATIVE_PROMPT,
+                "artist_prompt": t.get("artist_prompt", ""),
+                "is_pinned": False,
+                "tag_ids": tag_ids,
+            })
+            existing_titles.add(title)
+            added += 1
+        return _ok({
+            "model_id": model_id,
+            "fetched": len(templates),
+            "added": added,
+            "sort": sort,
+            "period": period,
+        })
 
     # ---------- 标签 ----------
     @routes.get("/anima_t8/tags")
@@ -341,7 +436,7 @@ def register_routes():
     async def meta(request: web.Request):
         return _ok({
             "default_negative": DEFAULT_NEGATIVE_PROMPT,
-            "version": "1.0.0",
+            "version": "1.1.0",
         })
 
     # ---------- 导入 / 导出 ----------
@@ -358,4 +453,4 @@ def register_routes():
         cnt = prompt_manager.import_all(body or {}, replace=bool(body.get("__replace")))
         return _ok(cnt)
 
-    print("[anima_t8] 已注册 HTTP 路由（含 Danbooru tags）")
+    print("[anima_t8] 已注册 HTTP 路由（含 Danbooru tags + Civitai 模板抓取）")

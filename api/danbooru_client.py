@@ -7,6 +7,7 @@ category 取值：
     1 = artist     画师
     3 = copyright  作品 IP（动画/游戏/漫画作品名）
     4 = character  角色 IP
+    5 = meta       元标签（画质/媒介/年代/镜头等响应风格的 token）
 
 接口：
     https://danbooru.donmai.us/tags.json
@@ -30,7 +31,7 @@ from typing import Dict, List, Optional, Tuple
 BASE_URL = "https://danbooru.donmai.us"
 USER_AGENT = "comfyui-anima-t8/1.0 (https://github.com/mikuYongh/AnimaForge)"
 
-CATEGORY_NAMES = {1: "artist", 3: "copyright", 4: "character"}
+CATEGORY_NAMES = {1: "artist", 3: "copyright", 4: "character", 5: "meta"}
 CATEGORY_BY_NAME = {v: k for k, v in CATEGORY_NAMES.items()}
 
 

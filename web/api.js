@@ -71,6 +71,9 @@ export const AnimaApi = {
     pinDtag: (name, category, pinned) => _req("POST", "/dtags/pin", { name, category, pinned }),
     previewDtag: (name) => _req("GET", "/dtags/preview?name=" + encodeURIComponent(name)),
 
+    // ----- Civitai 模板抓取 -----
+    refreshFromCivitai: (params) => _req("POST", "/civitai/refresh", params || {}),
+
     listSnippets: (type) => _req("GET", "/snippets" + (type ? "?type=" + type : "")),
     addSnippet: (content, type) => _req("POST", "/snippets", { content, type }),
     deleteSnippet: (id) => _req("DELETE", "/snippets/" + encodeURIComponent(id)),

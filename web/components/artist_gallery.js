@@ -16,11 +16,13 @@ const PLACEHOLDER_SVG = "data:image/svg+xml;utf8," + encodeURIComponent(
  *  - dba  ： Danbooru artist（画师 tag，无预览图）
  *  - dbc  ： Danbooru copyright（作品 IP）
  *  - dbk  ： Danbooru character（角色 IP）
+ *  - dbm  ： Danbooru meta（风格/画质/媒介/年代等元标签）
  */
 const TABS = [
     { key: "dba", label: "👤 Danbooru 画师",        source: "dan", isArtist: true,  category: "artist",    hasImage: false },
     { key: "dbc", label: "📚 作品 IP",                 source: "dan", isArtist: false, category: "copyright", hasImage: false },
     { key: "dbk", label: "🧑‍🎤 角色 IP",                 source: "dan", isArtist: false, category: "character", hasImage: false },
+    { key: "dbm", label: "🎭 风格·meta",            source: "dan", isArtist: false, category: "meta",      hasImage: false },
     { key: "moo", label: "🎨 画师库·mooshieblob", source: "moo", isArtist: true,  hasImage: true  },
 ];
 

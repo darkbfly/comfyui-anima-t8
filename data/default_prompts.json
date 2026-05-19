@@ -1,8 +1,16 @@
 [
   {
+    "title": "Pony 默认",
+    "description": "Pony / Illustrious / Anima 通用默认起手句",
+    "positive_prompt": "score_9, score_8_up, score_7_up, source_anime, 1girl, masterpiece, best quality, ultra detailed",
+    "artist_prompt": "",
+    "is_pinned": true,
+    "tag_names": ["画质", "风格"]
+  },
+  {
     "title": "动漫默认",
     "description": "标准动漫风格，高质量设置",
-    "positive_prompt": "masterpiece, best quality, highly detailed, anime style, beautiful face, detailed eyes, vibrant colors",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, best quality, highly detailed, anime style, beautiful face, detailed eyes, vibrant colors",
     "artist_prompt": "",
     "is_pinned": true,
     "tag_names": ["画质", "风格"]
@@ -10,7 +18,7 @@
   {
     "title": "可爱动漫",
     "description": "可爱卡哇伊动漫女孩风格",
-    "positive_prompt": "masterpiece, best quality, 1girl, cute, kawaii, smile, blush, big eyes, pastel colors, soft lighting, detailed face, colorful",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, best quality, 1girl, cute, kawaii, smile, blush, big eyes, pastel colors, soft lighting, detailed face, colorful",
     "artist_prompt": "",
     "is_pinned": false,
     "tag_names": ["角色", "风格"]
@@ -18,10 +26,10 @@
   {
     "title": "暗黑动漫",
     "description": "暗黑哥特动漫风格",
-    "positive_prompt": "masterpiece, best quality, dark theme, gothic, dramatic lighting, detailed shadows, anime style, mysterious atmosphere",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, best quality, dark theme, gothic, dramatic lighting, detailed shadows, anime style, mysterious atmosphere",
     "artist_prompt": "",
     "is_pinned": false,
-    "tag_names": ["风格", "光影"]
+    "tag_names": ["风格", "光影", "情绪"]
   },
   {
     "title": "写实人像",
@@ -42,31 +50,31 @@
   {
     "title": "水彩画",
     "description": "柔和水彩画风格",
-    "positive_prompt": "masterpiece, best quality, watercolor painting, soft colors, artistic, flowing, dreamy, delicate brushstrokes, paper texture",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, best quality, watercolor (medium), soft colors, artistic, flowing wash, dreamy, delicate brushstrokes, paper texture",
     "artist_prompt": "",
     "is_pinned": false,
-    "tag_names": ["风格"]
+    "tag_names": ["风格", "媒介"]
   },
   {
     "title": "像素艺术",
     "description": "复古像素游戏风格",
-    "positive_prompt": "masterpiece, pixel art, 16bit, retro game style, clean pixels, detailed sprite, vibrant colors, nostalgic",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, pixel art, 16bit, retro game style, clean pixels, detailed sprite, vibrant colors, nostalgic",
     "artist_prompt": "",
     "is_pinned": false,
-    "tag_names": ["风格"]
+    "tag_names": ["风格", "媒介"]
   },
   {
     "title": "油画",
     "description": "古典油画风格",
-    "positive_prompt": "masterpiece, best quality, oil painting, rich colors, thick brushstrokes, canvas texture, classical art, dramatic lighting",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, best quality, oil painting (medium), rich colors, thick brushstrokes, canvas texture, classical art, dramatic lighting",
     "artist_prompt": "",
     "is_pinned": false,
-    "tag_names": ["风格"]
+    "tag_names": ["风格", "媒介"]
   },
   {
-    "title": "赛博朋克",
-    "description": "霓虹灯赛博朋克风格",
-    "positive_prompt": "masterpiece, best quality, cyberpunk, neon lights, futuristic city, rain, dark atmosphere, high tech, blade runner style",
+    "title": "赛博朗克",
+    "description": "霉虹灯赛博朗克风格",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, best quality, cyberpunk, neon lights, futuristic city, rain, dark atmosphere, high tech, blade runner style",
     "artist_prompt": "",
     "is_pinned": false,
     "tag_names": ["场景", "风格"]
@@ -74,15 +82,15 @@
   {
     "title": "奇幻艺术",
     "description": "史诗奇幻艺术风格",
-    "positive_prompt": "masterpiece, best quality, fantasy art, magical, ethereal, detailed, epic, dramatic lighting, mystical atmosphere",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, best quality, fantasy art, magical, ethereal, detailed, epic, dramatic lighting, mystical atmosphere",
     "artist_prompt": "",
     "is_pinned": false,
-    "tag_names": ["风格"]
+    "tag_names": ["风格", "情绪"]
   },
   {
     "title": "Q版",
     "description": "可爱Q版超变形风格",
-    "positive_prompt": "masterpiece, best quality, chibi, super deformed, cute, small body, big head, kawaii, simple, adorable",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, best quality, chibi, super deformed, cute, small body, big head, kawaii, simple, adorable",
     "artist_prompt": "",
     "is_pinned": false,
     "tag_names": ["角色", "风格"]
@@ -90,9 +98,321 @@
   {
     "title": "吉卜力风格",
     "description": "吉卜力工作室风格",
-    "positive_prompt": "masterpiece, best quality, studio ghibli style, miyazaki, watercolor background, detailed nature, warm colors, peaceful, whimsical",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, best quality, studio ghibli style, miyazaki, watercolor background, detailed nature, warm colors, peaceful, whimsical",
     "artist_prompt": "",
     "is_pinned": false,
-    "tag_names": ["风格"]
+    "tag_names": ["风格", "情绪"]
+  },
+  {
+    "title": "线稿",
+    "description": "黑白线稿 / lineart 风格",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, lineart, monochrome, clean line, no shading, ink outline, white background",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["媒介", "风格"]
+  },
+  {
+    "title": "单色黑白",
+    "description": "黑白 / monochrome / greyscale",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, monochrome, greyscale, high contrast, detailed shading",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["媒介", "风格"]
+  },
+  {
+    "title": "厚涂画风",
+    "description": "绘画感厚涂 / impasto / painterly",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, painterly, impasto, thick paint, visible brushstrokes, rich texture, illustrative",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["媒介", "风格"]
+  },
+  {
+    "title": "动漫平涂",
+    "description": "二次元 cel shading、平涂动画质感",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, anime cel shading, flat color, clean lineart, vibrant, anime screenshot",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["媒介", "风格"]
+  },
+  {
+    "title": "铅笔素描",
+    "description": "铅笔 / 炭笔手稿",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, sketch, pencil drawing, traditional media, hatching, paper texture, monochrome",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["媒介", "风格"]
+  },
+  {
+    "title": "国画水墨",
+    "description": "东方水墨 / sumi-e / ink wash",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, ink wash painting, sumi-e, traditional chinese painting, calligraphy strokes, rice paper, minimal",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["媒介", "风格", "时代"]
+  },
+  {
+    "title": "浮世绘",
+    "description": "日本浮世绘 / ukiyo-e / 木版画",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, ukiyo-e, woodblock print, japanese traditional art, edo period, flat colors, bold outline",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["媒介", "风格", "时代"]
+  },
+  {
+    "title": "学园 JK",
+    "description": "日常学园 / JK / 教室场景",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, 1girl, school uniform, classroom, blackboard, sunlight through window, slice of life",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["场景", "服装"]
+  },
+  {
+    "title": "咖啡馆下午茶",
+    "description": "温暖咖啡馆场景",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, 1girl, cafe interior, coffee cup, warm lighting, cozy atmosphere, indoor, afternoon",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["场景", "情绪"]
+  },
+  {
+    "title": "末世废土",
+    "description": "末世 / post-apocalyptic / 废墟",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, post-apocalyptic, ruined city, dust, desolate, scavenger, dramatic sky, gritty atmosphere",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["场景", "情绪"]
+  },
+  {
+    "title": "蒸汽朗克",
+    "description": "复古蒸汽机械 / steampunk",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, steampunk, brass gears, victorian era, airship, mechanical, sepia tone, intricate machinery",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["场景", "风格", "时代"]
+  },
+  {
+    "title": "太空科幻",
+    "description": "太空站 / 星空 / sci-fi",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, space station, starship, nebula, futuristic, cosmic, glowing panels, sci-fi",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["场景", "风格"]
+  },
+  {
+    "title": "古风庭院",
+    "description": "中式古风庭院 / 汉服",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, 1girl, hanfu, ancient chinese architecture, courtyard, cherry blossom, traditional, elegant",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["场景", "服装", "时代"]
+  },
+  {
+    "title": "现代街头",
+    "description": "都市街景 / 便利店",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, 1girl, modern city street, urban, billboards, casual outfit, photoreal lighting",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["场景"]
+  },
+  {
+    "title": "海岛度假",
+    "description": "夏日海岛沙滩",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, 1girl, beach, ocean, palm trees, swimsuit, summer, bright sunlight, tropical",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["场景", "季节"]
+  },
+  {
+    "title": "冰雪极地",
+    "description": "冰雪世界 / 极地",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, snowy landscape, ice, aurora borealis, cold atmosphere, frosty breath, winter coat",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["场景", "季节"]
+  },
+  {
+    "title": "镜头·特写",
+    "description": "脸部特写 / close-up",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, 1girl, close-up, face focus, portrait, detailed eyes, bokeh background",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["镜头", "构图"]
+  },
+  {
+    "title": "镜头·半身",
+    "description": "upper body / 半身肖像",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, 1girl, upper body, portrait, looking at viewer, soft focus background",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["镜头", "构图"]
+  },
+  {
+    "title": "镜头·全身",
+    "description": "full body / 站姿全身",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, 1girl, full body, standing, looking at viewer, full figure",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["镜头", "构图"]
+  },
+  {
+    "title": "镜头·仰拍",
+    "description": "from below / 低机位",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, 1girl, from below, low angle, dynamic perspective, dramatic",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["镜头", "构图"]
+  },
+  {
+    "title": "镜头·俯拍",
+    "description": "from above / 高机位",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, 1girl, from above, top-down angle, looking up at viewer",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["镜头", "构图"]
+  },
+  {
+    "title": "电影构图",
+    "description": "cinematic composition / 宽幅画面",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, cinematic composition, wide shot, depth of field, film grain, anamorphic, dramatic framing",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["镜头", "构图"]
+  },
+  {
+    "title": "体积光",
+    "description": "volumetric lighting / 丝州光",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, volumetric lighting, god rays, light shafts, atmospheric, dust particles",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["光影"]
+  },
+  {
+    "title": "黄金时刻",
+    "description": "golden hour / 黄昏暖光",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, golden hour, warm sunlight, lens flare, soft shadows, magic hour, cinematic",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["光影"]
+  },
+  {
+    "title": "月光夜景",
+    "description": "moonlight / 冷调夜景",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, moonlight, night, cool blue tone, stars, silhouette, atmospheric",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["光影", "情绪"]
+  },
+  {
+    "title": "霉虹灯光",
+    "description": "neon light / 外部高对比霉虹",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, neon lights, cyberpunk lighting, magenta and cyan, glowing signs, reflective surfaces",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["光影"]
+  },
+  {
+    "title": "逆光轮廓",
+    "description": "backlight / rim light",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, backlight, rim lighting, silhouette outline, glowing edge, contre-jour",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["光影"]
+  },
+  {
+    "title": "戏剧打光",
+    "description": "dramatic lighting / 高对比",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, dramatic lighting, chiaroscuro, hard light, deep shadows, theatrical",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["光影"]
+  },
+  {
+    "title": "治愈系",
+    "description": "iyashikei / 温柔治愈",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, iyashikei, peaceful, soft pastel colors, gentle smile, calm atmosphere, slice of life",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["情绪", "风格"]
+  },
+  {
+    "title": "孤独冷调",
+    "description": "melancholic / 伤感低饱和",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, melancholic, lonely, muted colors, overcast, faded, introspective mood",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["情绪", "光影"]
+  },
+  {
+    "title": "阳光元气",
+    "description": "cheerful / 活泼清新",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, 1girl, cheerful, energetic pose, bright smile, sunny day, vibrant colors, dynamic",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["情绪", "表情"]
+  },
+  {
+    "title": "梦幻浪漫",
+    "description": "dreamy / 粉调柔光",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, dreamy, ethereal, soft glow, pastel pink, romantic atmosphere, sparkles, floating petals",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["情绪", "风格"]
+  },
+  {
+    "title": "春樱花开",
+    "description": "春季樱花场景",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, 1girl, cherry blossom, sakura petals, spring, soft pink, falling petals, hanami",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["季节", "场景"]
+  },
+  {
+    "title": "夏日泳装",
+    "description": "夏季 / 游泳池 / 阳光",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, 1girl, summer, swimsuit, beach or pool, bright sunlight, vivid colors, water reflection",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["季节", "服装"]
+  },
+  {
+    "title": "秋枫营造",
+    "description": "秋季枫叶 / 暖调",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, 1girl, autumn, maple leaves, falling leaves, warm orange tone, scarf, cozy",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["季节", "场景"]
+  },
+  {
+    "title": "冬雪温柔",
+    "description": "冬季 / 雪景 / 毛衣",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, 1girl, winter, snow, sweater, scarf, breath visible, soft white tone",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["季节", "服装"]
+  },
+  {
+    "title": "民国旗袍",
+    "description": "中式复古 / 旗袍佳人",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, 1girl, qipao, cheongsam, vintage chinese, 1930s shanghai, elegant pose, oriental",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["服装", "时代"]
+  },
+  {
+    "title": "中世纪奇幻",
+    "description": "魔法 / 骑士 / 古堡",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, 1girl, medieval fantasy, armor, sword, castle background, magic, knight, fantasy outfit",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["服装", "场景", "时代"]
+  },
+  {
+    "title": "维多利亚复古",
+    "description": "victorian / 蒸汽时代服饰",
+    "positive_prompt": "score_9, score_8_up, score_7_up, masterpiece, 1girl, victorian dress, lace, corset, tea party, vintage interior, ornate",
+    "artist_prompt": "",
+    "is_pinned": false,
+    "tag_names": ["服装", "时代"]
   }
 ]

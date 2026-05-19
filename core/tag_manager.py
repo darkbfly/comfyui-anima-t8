@@ -38,10 +38,8 @@ def delete_tag(tag_id: str) -> bool:
 
 
 def ensure_default_tags() -> None:
-    """首次启动时写入内置默认标签。"""
+    """写入内置默认标签。按 name 增量：已存在同名标签跳过，新增的补入。"""
     db = get_db()
-    if db.fetchone("SELECT COUNT(*) AS c FROM tags")["c"] > 0:
-        return
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     path = os.path.join(root, "data", "default_tags.json")
     if not os.path.exists(path):
@@ -49,7 +47,12 @@ def ensure_default_tags() -> None:
     try:
         with open(path, "r", encoding="utf-8") as f:
             tags = json.load(f)
+        existing = {r["name"] for r in db.fetchall("SELECT name FROM tags")}
         for t in tags:
-            upsert_tag(t.get("name", ""), t.get("color", "#FF6B9D"))
+            name = t.get("name", "") or ""
+            if not name or name in existing:
+                continue
+            upsert_tag(name, t.get("color", "#FF6B9D"))
+            existing.add(name)
     except Exception as e:
         print("[anima_t8] 加载默认标签失败:", e)

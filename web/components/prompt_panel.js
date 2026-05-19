@@ -149,9 +149,40 @@ export function openPromptPanel({ onApply } = {}) {
         inp.click();
     }
 
+    async function fetchFromCivitai() {
+        const idStr = window.prompt(
+            "🌐 从 Civitai 拉取高赞图的 prompt 模板\n\n" +
+            "请输入 Civitai 模型 ID（模型页网址里的数字）\n" +
+            "例： https://civitai.com/models/257749  ->  257749\n\n" +
+            "可选：仅输入数字默认拉 Most Reactions / 近一个月 / 前 30 张",
+            ""
+        );
+        if (!idStr) return;
+        const modelId = parseInt(idStr.trim(), 10);
+        if (!modelId) { showToast("模型 ID 需为数字"); return; }
+        showToast("正在拉取 Civitai…这可能需 5–20 秒");
+        try {
+            const r = await AnimaApi.refreshFromCivitai({
+                model_id: modelId,
+                sort: "Most Reactions",
+                period: "Month",
+                nsfw: "None",
+                limit: 100,
+                max_pages: 1,
+                top_n: 30,
+                tag_names: ["风格"],
+            });
+            showToast(`Civitai 完成：拉取 ${r.fetched} 条，新增 ${r.added} 条`);
+            refresh();
+        } catch (e) {
+            showToast("Civitai 拉取失败：" + (e && e.message ? e.message : e));
+        }
+    }
+
     const panel = el("div", { class: "anima-t8-panel" },
         el("div", { class: "anima-t8-header" },
             el("h2", {}, "📚 Anima 风格库"),
+            el("button", { class: "anima-t8-btn", onclick: fetchFromCivitai }, "🌐 Civitai"),
             el("button", { class: "anima-t8-btn", onclick: importData }, "📥 导入"),
             el("button", { class: "anima-t8-btn", onclick: exportData }, "📤 导出"),
             el("button", {

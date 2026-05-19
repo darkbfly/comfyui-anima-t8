@@ -190,14 +190,13 @@ def delete_snippet(snippet_id: str) -> bool:
 # ---------- 默认种子提示词 ----------
 
 def ensure_default_prompts() -> int:
-    """首次启动写入内置的 12 个模板提示词（来源：原 App TemplateRepository）。
+    """写入内置的默认模板提示词（来源：data/default_prompts.json）。
 
-    只在数据库中 prompts 表为空时才写入，避免重复。
-    返回实际写入的提示词数量。
+    按 title 增量：库里已存在同名 title 跳过，新提供的模板补入。
+    这样不会覆盖/破坏用户已编辑过的数据，也能随着 json 更新不断补充。
+    返回实际新增写入的提示词数量。
     """
     db = get_db()
-    if db.fetchone("SELECT COUNT(*) AS c FROM prompts")["c"] > 0:
-        return 0
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     path = os.path.join(root, "data", "default_prompts.json")
     if not os.path.exists(path):
@@ -209,17 +208,20 @@ def ensure_default_prompts() -> int:
         print("[anima_t8] 加载默认提示词失败:", e)
         return 0
 
-    # 先拿全部现有标签的 name -> id 映射
+    existing_titles = {r["title"] for r in db.fetchall("SELECT title FROM prompts")}
     tag_rows = db.fetchall("SELECT id, name FROM tags")
     tag_map = {r["name"]: r["id"] for r in tag_rows}
 
     n = 0
     from .db import DEFAULT_NEGATIVE_PROMPT
     for s in seeds:
+        title = s.get("title", "") or ""
+        if not title or title in existing_titles:
+            continue
         names = s.get("tag_names") or []
         tag_ids = [tag_map[n] for n in names if n in tag_map]
         upsert_prompt({
-            "title": s.get("title", ""),
+            "title": title,
             "description": s.get("description", ""),
             "positive_prompt": s.get("positive_prompt", ""),
             "negative_prompt": s.get("negative_prompt", "") or DEFAULT_NEGATIVE_PROMPT,
@@ -228,8 +230,10 @@ def ensure_default_prompts() -> int:
             "is_pinned": bool(s.get("is_pinned")),
             "tag_ids": tag_ids,
         })
+        existing_titles.add(title)
         n += 1
-    print(f"[anima_t8] 已写入 {n} 个默认提示词")
+    if n > 0:
+        print(f"[anima_t8] 已补入 {n} 个新默认提示词")
     return n
 
 

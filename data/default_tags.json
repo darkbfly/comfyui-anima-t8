@@ -8,5 +8,10 @@
   { "name": "表情", "color": "#54C570" },
   { "name": "画质", "color": "#7A8DEF" },
   { "name": "NSFW", "color": "#D64545" },
-  { "name": "测试", "color": "#8aa0bf" }
+  { "name": "测试", "color": "#8aa0bf" },
+  { "name": "媒介", "color": "#4ECDC4" },
+  { "name": "镜头", "color": "#1FA2FF" },
+  { "name": "情绪", "color": "#C77DFF" },
+  { "name": "季节", "color": "#F4A261" },
+  { "name": "时代", "color": "#B5651D" }
 ]
