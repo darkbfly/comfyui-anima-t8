@@ -17,6 +17,19 @@ function setWidgetValue(node, name, value) {
     return true;
 }
 
+// 将单条画师条目（可能为 "name" 或 "name:weight"）格式化为 @name 或 (@name:weight)
+function formatArtistToken(line) {
+    const t = (line || "").trim();
+    if (!t) return "";
+    const idx = t.lastIndexOf(":");
+    if (idx > 0) {
+        const name = t.slice(0, idx).trim();
+        const weight = t.slice(idx + 1).trim();
+        return weight ? `(@${name}:${weight})` : `@${name}`;
+    }
+    return `@${t}`;
+}
+
 function appendArtistsToWidget(node, name, artistLines) {
     const w = (node.widgets || []).find(w => w.name === name);
     if (!w) return false;
@@ -80,13 +93,14 @@ app.registerExtension({
                 const isArtist = meta.isArtist !== false;
                 if (isArtist) {
                     const node = findActiveAnimaArtistNode();
-                    if (node) { appendArtistsToWidget(node, "artist_tags", lines); return; }
+                    const artistTokens = lines.map(formatArtistToken).filter(Boolean);
+                    if (node) { appendArtistsToWidget(node, "artist_tags", artistTokens); return; }
                     const pn = findActiveAnimaPromptNode();
                     if (pn) {
                         const w = (pn.widgets || []).find(w => w.name === "style");
                         if (w) {
                             const cur = (w.value || "").trim();
-                            const merged = (cur ? cur + ", " : "") + lines.map(l => `(artist:${l})`).join(", ");
+                            const merged = (cur ? cur + ", " : "") + artistTokens.join(", ");
                             setWidgetValue(pn, "style", merged);
                             return;
                         }
@@ -144,7 +158,7 @@ app.registerExtension({
                                 let name = l, weight = "";
                                 if (idx > 0) { name = l.slice(0, idx); weight = l.slice(idx + 1); }
                                 if (isArtist) {
-                                    return weight ? `(artist:${name}:${weight})` : `(artist:${name})`;
+                                    return formatArtistToken(l);
                                 }
                                 return weight ? `(${name}:${weight})` : name;
                             });
@@ -160,7 +174,8 @@ app.registerExtension({
                                 showToast("作品/角色 IP 请在 AnimaPromptT8 节点上打开该库");
                                 return;
                             }
-                            appendArtistsToWidget(self, "artist_tags", lines);
+                            const artistTokens = lines.map(formatArtistToken).filter(Boolean);
+                            appendArtistsToWidget(self, "artist_tags", artistTokens);
                         },
                     }));
                 } else if (nodeData.name === "AnimaSavedPromptLoaderT8") {

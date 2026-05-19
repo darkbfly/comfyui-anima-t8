@@ -26,7 +26,7 @@ class AnimaPromptT8:
             "required": {
                 "positive": ("STRING", {
                     "multiline": True,
-                    "default": "1girl, masterpiece, best quality, ultra detailed",
+                    "default": "score_9,score_8,score_7,1girl, masterpiece, best quality, ultra detailed",
                     "placeholder": "正向提示词 (Positive)",
                 }),
                 "negative": ("STRING", {
