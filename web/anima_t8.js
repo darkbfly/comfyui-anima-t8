@@ -73,6 +73,30 @@ function appendArtistsToWidget(node, name, artistLines) {
     return true;
 }
 
+// 覆盖式写 last_picked widget，强制 strip 为纯 tag name（供 PREVIEW_IMAGES 拉 Danbooru 预览图）。
+// 适用于作品 IP / 角色 IP / 风格·meta 这类非画师 token：
+//   不写 artist_tags（避免污染 STYLE_PROMPT），仅写 last_picked 让节点运行时拉预览图。
+function setLastPickedRaw(node, lines) {
+    const lp = (node.widgets || []).find(w => w.name === "last_picked");
+    if (!lp) return false;
+    const rawNames = (lines || []).map(l => {
+        let s = (l || "").trim();
+        if (s.startsWith("(") && s.endsWith(")")) s = s.slice(1, -1).trim();
+        if (s.startsWith("@")) s = s.slice(1);
+        if (s.startsWith("artist:")) s = s.slice("artist:".length);
+        const ci = s.lastIndexOf(":");
+        if (ci > 0) {
+            const tail = s.slice(ci + 1).trim();
+            if (/^[0-9.]+$/.test(tail)) s = s.slice(0, ci);
+        }
+        return s.trim();
+    }).filter(Boolean);
+    lp.value = rawNames.join(", ");
+    if (lp.callback) { try { lp.callback(lp.value, app.canvas, node); } catch (_) {} }
+    node.setDirtyCanvas(true, true);
+    return true;
+}
+
 function applyPromptToNode(node, p) {
     if (!node || !p) return;
     setWidgetValue(node, "positive", p.positive_prompt || "");
@@ -186,13 +210,35 @@ app.registerExtension({
                 } else if (nodeData.name === "AnimaArtistStyleT8") {
                     addBtn(self, "🎨 艺术家库", () => openArtistGallery({
                         onApply: (lines, meta = {}) => {
-                            // 该节点只接收画师类 token；IP 类提示用户
-                            if (meta.isArtist === false) {
-                                showToast("作品/角色 IP 请在 AnimaPromptT8 节点上打开该库");
+                            const isArtist = meta.isArtist !== false;
+                            if (isArtist) {
+                                // 画师类：写 artist_tags（带 @）+ last_picked（纯 name）
+                                const artistTokens = lines.map(formatArtistToken).filter(Boolean);
+                                appendArtistsToWidget(self, "artist_tags", artistTokens);
                                 return;
                             }
-                            const artistTokens = lines.map(formatArtistToken).filter(Boolean);
-                            appendArtistsToWidget(self, "artist_tags", artistTokens);
+                            // 非画师类（作品 IP / 角色 / meta）：
+                            // 1) 覆盖式写 last_picked→ PREVIEW_IMAGES 拉 Danbooru 预览图
+                            // 2) 不写 artist_tags（避免污染 STYLE_PROMPT）
+                            // 3) 如画布上有 AnimaPromptT8，顺手写入其 positive widget方便组装提示词
+                            setLastPickedRaw(self, lines);
+                            const pn = findActiveAnimaPromptNode();
+                            if (pn) {
+                                const w = (pn.widgets || []).find(w => w.name === "positive");
+                                if (w) {
+                                    const cur = (w.value || "").trim();
+                                    const segs = lines.map(l => {
+                                        const idx = l.lastIndexOf(":");
+                                        if (idx > 0) {
+                                            const name = l.slice(0, idx), wv = l.slice(idx + 1);
+                                            return `(${name}:${wv})`;
+                                        }
+                                        return l;
+                                    });
+                                    setWidgetValue(pn, "positive", (cur ? cur + ", " : "") + segs.join(", "));
+                                }
+                            }
+                            showToast("已加入预览图列表，运行节点查看");
                         },
                     }));
                 } else if (nodeData.name === "AnimaSavedPromptLoaderT8") {
