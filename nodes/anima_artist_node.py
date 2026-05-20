@@ -13,17 +13,22 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Optional
 
 DANBOORU_BASE = "https://danbooru.donmai.us"
-_USER_AGENT = "comfyui-anima-t8/1.0"
+_USER_AGENT = "comfyui-anima-t8/1.2"
 _PREVIEW_W, _PREVIEW_H = 512, 768  # 输出预览图统一尺寸
 
 
-def _fetch_preview_pil(name: str, timeout: float = 8.0):
-    """从 Danbooru 拉一个 tag 的代表作首图，返回 PIL.Image 或 None。"""
-    try:
-        from PIL import Image  # 延迟导入，避免节点加载时依赖错误
-    except ImportError:
-        print("[anima_t8] Pillow 未安装，无法生成预览图")
-        return None
+def _strip_at_prefix(name: str) -> str:
+    """去掉 v1.1 引入的 `@` 前缀。带头尾括号、多重 `@` 也处理干净。"""
+    n = (name or "").strip()
+    while n.startswith("@"):
+        n = n[1:].strip()
+    return n
+
+
+def _danbooru_first_image_url(name: str, timeout: float = 8.0) -> str:
+    """查 Danbooru posts.json 拿首图 URL，拿不到返回空串。"""
+    if not name:
+        return ""
     tag_q = urllib.parse.quote(name, safe=":/_")
     api = f"{DANBOORU_BASE}/posts.json?tags={tag_q}&limit=1"
     try:
@@ -31,22 +36,85 @@ def _fetch_preview_pil(name: str, timeout: float = 8.0):
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             data = json.loads(resp.read().decode("utf-8", errors="ignore"))
         if not isinstance(data, list) or not data:
-            return None
+            return ""
         p = data[0]
-        img_url = (p.get("large_file_url") or p.get("preview_file_url")
-                   or p.get("file_url") or "")
-        if not img_url:
-            return None
-        req2 = urllib.request.Request(img_url, headers={
+        return (p.get("large_file_url") or p.get("preview_file_url")
+                or p.get("file_url") or "")
+    except Exception as e:
+        print(f"[anima_t8] danbooru posts fail name={name}: {e}")
+        return ""
+
+
+def _download_to_pil(img_url: str, timeout: float = 16.0):
+    """下载一个图片 URL 转 PIL.Image（RGB），失败返回 None。"""
+    if not img_url:
+        return None
+    try:
+        from PIL import Image
+    except ImportError:
+        print("[anima_t8] Pillow 未安装，无法生成预览图")
+        return None
+    try:
+        req = urllib.request.Request(img_url, headers={
             "User-Agent": _USER_AGENT,
             "Referer": "https://danbooru.donmai.us/",
         })
-        with urllib.request.urlopen(req2, timeout=timeout * 2) as resp:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             buf = resp.read()
         return Image.open(io.BytesIO(buf)).convert("RGB")
     except Exception as e:
-        print(f"[anima_t8] preview fetch fail name={name}: {e}")
+        print(f"[anima_t8] download img fail url={img_url[:80]}: {e}")
         return None
+
+
+def _fetch_preview_pil(name: str, timeout: float = 8.0):
+    """三段 fallback 拉代表作首图，返回 PIL.Image 或 None。
+
+    1. Danbooru posts.json `tags={name}` 首图
+    2. 失败 → 查 mooshieblob 本地缓存：
+       a. 如果查到 Danbooru 真实 tag 且 != name，用该 tag 重查 Danbooru
+       b. 还失败 → 直接下载 mooshieblob 自家 image_url（cdn.mooshieblob.com webp）
+    3. 都失败 → None
+    """
+    n = _strip_at_prefix(name)
+    if not n:
+        return None
+
+    # 1. 直查 Danbooru
+    img_url = _danbooru_first_image_url(n, timeout=timeout)
+    if img_url:
+        pil = _download_to_pil(img_url, timeout=timeout * 2)
+        if pil is not None:
+            return pil
+
+    # 2. 查 mooshieblob 本地缓存做 fallback
+    info = None
+    try:
+        try:
+            from core.artist_manager import get_artist_manager
+        except Exception:
+            from ..core.artist_manager import get_artist_manager  # 兑底
+        info = get_artist_manager().lookup_by_name(n)
+    except Exception as e:
+        print(f"[anima_t8] mooshieblob lookup fail name={n}: {e}")
+
+    if info:
+        # 2a. 用 mooshieblob 记录的“真实 Danbooru tag”重查
+        real_tag = (info.get("tag") or "").strip()
+        if real_tag and real_tag != n:
+            img_url = _danbooru_first_image_url(real_tag, timeout=timeout)
+            if img_url:
+                pil = _download_to_pil(img_url, timeout=timeout * 2)
+                if pil is not None:
+                    return pil
+        # 2b. 直接拉 mooshieblob 自家 webp
+        moo_url = (info.get("image_url") or "").strip()
+        if moo_url:
+            pil = _download_to_pil(moo_url, timeout=timeout * 2)
+            if pil is not None:
+                return pil
+
+    return None
 
 
 class AnimaArtistStyleT8:
@@ -111,8 +179,6 @@ class AnimaArtistStyleT8:
                     inner = inner[len("artist:"):]
                 if ":" in inner:
                     inner = inner.rsplit(":", 1)[0].strip()
-                if inner.startswith("@"):
-                    inner = inner[1:].strip()
                 if inner:
                     names.append(inner)
                 continue
@@ -130,12 +196,10 @@ class AnimaArtistStyleT8:
                 w = default_weight
 
             name = name.replace("(artist:", "").rstrip(")").strip()
+            name = _strip_at_prefix(name)
             if not name:
                 continue
-            # name 应用于拼 prompt（保留 @ 前缀）；names 应用于预览图拉取（必须去 @）
-            preview_name = name[1:].strip() if name.startswith("@") else name
-            if preview_name:
-                names.append(preview_name)
+            names.append(name)
 
             prefix = "artist:" if use_artist_prefix else ""
             if abs(w - 1.0) < 1e-3:
@@ -151,7 +215,7 @@ class AnimaArtistStyleT8:
 
     @staticmethod
     def _parse_names(text: str) -> List[str]:
-        """从逗号 / 换行分隔的文本里提取纯 name 列表（去权重去括号去 @ 前缀）。"""
+        """从逗号 / 换行分隔的文本里提取纯 name 列表（去权重去括号）。"""
         out: List[str] = []
         for ln in (text or "").splitlines():
             for piece in ln.split(","):
@@ -162,13 +226,10 @@ class AnimaArtistStyleT8:
                     t = t.strip("()").strip()
                     if t.startswith("artist:"):
                         t = t[len("artist:"):]
-                if t.startswith("@"):
-                    t = t[1:].strip()
                 if ":" in t:
                     t = t.rsplit(":", 1)[0].strip()
                 t = t.replace("(artist:", "").rstrip(")").strip()
-                if t.startswith("@"):
-                    t = t[1:].strip()
+                t = _strip_at_prefix(t)
                 if t:
                     out.append(t)
         return out

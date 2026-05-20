@@ -119,6 +119,47 @@ class ArtistManager:
     def image_url(self, image_id: str) -> str:
         return self._client.image_url(image_id)
 
+    def lookup_by_name(self, name: str) -> Optional[Dict[str, Any]]:
+        """按 slug 或 Danbooru tag 查本地 mooshieblob 缓存。
+
+        返回 dict 含 `slug` / `tag` / `image_url` / `has_image`；未命中返回 None。
+        为节点拉预览图提供 fallback：可以拿到 “真实 Danbooru tag” 重查首图，
+        或直接拿到 mooshieblob 自家 webp URL 作最后兑底。
+        """
+        if not name:
+            return None
+        n = name.strip()
+        if not n:
+            return None
+        db = get_db()
+        row = db.fetchone(
+            "SELECT slug, tag, image_id, has_image FROM artists_cache WHERE slug = ?",
+            (n,),
+        )
+        if not row:
+            row = db.fetchone(
+                "SELECT slug, tag, image_id, has_image FROM artists_cache WHERE tag = ?",
+                (n,),
+            )
+        if not row:
+            # 兑底：不区分大小写 / 去下划线匹配
+            row = db.fetchone(
+                "SELECT slug, tag, image_id, has_image FROM artists_cache "
+                "WHERE LOWER(slug) = LOWER(?) OR LOWER(tag) = LOWER(?) LIMIT 1",
+                (n, n),
+            )
+        if not row:
+            return None
+        has_img = bool(row.get("has_image"))
+        return {
+            "slug": row.get("slug") or "",
+            "tag": row.get("tag") or "",
+            "image_id": row.get("image_id") or "",
+            "has_image": has_img,
+            "image_url": self._client.image_url(row.get("image_id") or "")
+                         if has_img else "",
+        }
+
 
 _MANAGER: Optional[ArtistManager] = None
 
