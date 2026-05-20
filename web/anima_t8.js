@@ -57,11 +57,18 @@ function appendArtistsToWidget(node, name, artistLines) {
 }
 
 function applyPromptToNode(node, p) {
-    if (!node || !p) return;
-    setWidgetValue(node, "positive", p.positive_prompt || "");
-    setWidgetValue(node, "negative", p.negative_prompt || "");
-    setWidgetValue(node, "style", p.artist_prompt || "");
+    if (!node) { showToast("未找到 Anima Prompt T8 节点"); return false; }
+    if (!p) return false;
+    let any = false;
+    if (setWidgetValue(node, "positive", p.positive_prompt || "")) any = true;
+    if (setWidgetValue(node, "negative", p.negative_prompt || "")) any = true;
+    if (setWidgetValue(node, "style", p.artist_prompt || "")) any = true;
+    if (!any) {
+        showToast("该节点未找到 positive/negative/style widget\u3002\u8BF7\u4F7F\u7528 AnimaPromptT8 \u8282\u70B9\u3002");
+        return false;
+    }
     showToast("已应用：" + (p.title || ""));
+    return true;
 }
 
 const ANIMA_NODES = new Set([
@@ -84,8 +91,11 @@ app.registerExtension({
             btn1.className = "comfy-button"; btn1.textContent = "📚 Anima 风格库";
             btn1.addEventListener("click", () => openPromptPanel({ onApply: (p) => {
                 const node = findActiveAnimaPromptNode();
-                if (node) applyPromptToNode(node, p);
-                else showToast("请在画布中选中 Anima Prompt T8 节点");
+                if (!node) {
+                    showToast("请在画布中选中 Anima Prompt T8 节点");
+                    return false;
+                }
+                return applyPromptToNode(node, p);
             }}));
             const btn2 = document.createElement("button");
             btn2.className = "comfy-button"; btn2.textContent = "🎨 Anima 艺术家库";
@@ -179,7 +189,18 @@ app.registerExtension({
                         },
                     }));
                 } else if (nodeData.name === "AnimaSavedPromptLoaderT8") {
-                    addBtn(self, "📚 风格库", () => openPromptPanel({}));
+                    // 该节点本身仅 preset_id widget，没有 positive/negative/style，
+                    // “应用”时自动 fallback 到画布上的 AnimaPromptT8 节点
+                    addBtn(self, "📚 风格库", () => openPromptPanel({
+                        onApply: (p) => {
+                            const target = findActiveAnimaPromptNode();
+                            if (!target) {
+                                showToast("请在画布中放置一个 Anima Prompt T8 节点以接收提示词");
+                                return false;
+                            }
+                            return applyPromptToNode(target, p);
+                        },
+                    }));
                 }
             } catch (e) {
                 console.warn("[anima_t8] init node btn error:", e);
@@ -193,25 +214,27 @@ function addBtn(node, text, cb) {
     node.addWidget("button", text, null, cb, { serialize: false });
 }
 
+function _iterSelected(sel) {
+    // 兼容新版 ComfyUI Frontend：sel 可能是 Object、Array 或 Map
+    if (!sel) return [];
+    if (Array.isArray(sel)) return sel;
+    if (typeof sel.values === "function" && typeof sel.size === "number") {
+        return Array.from(sel.values());
+    }
+    return Object.values(sel);
+}
+
 function findActiveAnimaPromptNode() {
-    const sel = app.canvas?.selected_nodes;
-    if (sel) {
-        for (const id in sel) {
-            const n = sel[id];
-            if (n && (n.comfyClass === "AnimaPromptT8" || n.type === "AnimaPromptT8")) return n;
-        }
+    for (const n of _iterSelected(app.canvas?.selected_nodes)) {
+        if (n && (n.comfyClass === "AnimaPromptT8" || n.type === "AnimaPromptT8")) return n;
     }
     const nodes = app.graph?._nodes || [];
     return nodes.find(n => n.comfyClass === "AnimaPromptT8" || n.type === "AnimaPromptT8");
 }
 
 function findActiveAnimaArtistNode() {
-    const sel = app.canvas?.selected_nodes;
-    if (sel) {
-        for (const id in sel) {
-            const n = sel[id];
-            if (n && (n.comfyClass === "AnimaArtistStyleT8" || n.type === "AnimaArtistStyleT8")) return n;
-        }
+    for (const n of _iterSelected(app.canvas?.selected_nodes)) {
+        if (n && (n.comfyClass === "AnimaArtistStyleT8" || n.type === "AnimaArtistStyleT8")) return n;
     }
     const nodes = app.graph?._nodes || [];
     return nodes.find(n => n.comfyClass === "AnimaArtistStyleT8" || n.type === "AnimaArtistStyleT8");

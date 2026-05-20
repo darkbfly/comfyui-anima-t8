@@ -60,8 +60,25 @@ export function openPromptPanel({ onApply } = {}) {
         const actions = el("div", { class: "anima-t8-card-actions" },
             el("button", {
                 class: "anima-t8-btn primary",
-                onclick: () => { onApply && onApply(p); showToast("已应用到节点"); mask.remove(); },
-            }, "➡ 应用"),
+                onclick: () => {
+                    if (typeof onApply !== "function") {
+                        showToast("当前面板未绑定节点。请在画布节点的 📚 风格库 按钮打开。");
+                        return;
+                    }
+                    let ok = false;
+                    try {
+                        const r = onApply(p);
+                        // onApply 可以返回 false 表示未生效（例如未找到节点），
+                        // 返回 undefined / true / Promise 都当作已试图应用
+                        ok = r !== false;
+                    } catch (e) {
+                        console.error("[anima_t8] onApply error:", e);
+                        showToast("应用失败：" + (e && e.message ? e.message : e));
+                        return;
+                    }
+                    if (ok) mask.remove();
+                },
+            }, "➜ 应用"),
             el("button", {
                 class: "anima-t8-btn",
                 onclick: async () => { await AnimaApi.favoritePrompt(p.id); refresh(); },
