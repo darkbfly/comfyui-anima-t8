@@ -47,9 +47,26 @@ function appendArtistsToWidget(node, name, artistLines) {
     if (w.callback) { try { w.callback(w.value, app.canvas, node); } catch (_) {} }
     // 同时记录本次选中的画师到 last_picked widget（覆盖式），
     // 让节点 build() 仅对本次选中拉预览图。
+    // ⚠️ 后端 _fetch_preview_pil 会拿这个值去查 Danbooru，必须是纯 tag name——
+    //   必须 strip 掉 @ 前缀 / artist: 前缀 / 括号 / :weight，否则拉不出图变黑图。
     const lp = (node.widgets || []).find(w => w.name === "last_picked");
     if (lp) {
-        lp.value = (artistLines || []).map(l => (l || "").trim()).filter(Boolean).join(", ");
+        const rawNames = (artistLines || []).map(l => {
+            let s = (l || "").trim();
+            // 拆括号：(@wlop:1.1) → @wlop:1.1
+            if (s.startsWith("(") && s.endsWith(")")) s = s.slice(1, -1).trim();
+            // 去 @ / artist: 前缀
+            if (s.startsWith("@")) s = s.slice(1);
+            if (s.startsWith("artist:")) s = s.slice("artist:".length);
+            // 去尾部 :weight
+            const ci = s.lastIndexOf(":");
+            if (ci > 0) {
+                const tail = s.slice(ci + 1).trim();
+                if (/^[0-9.]+$/.test(tail)) s = s.slice(0, ci);
+            }
+            return s.trim();
+        }).filter(Boolean);
+        lp.value = rawNames.join(", ");
         if (lp.callback) { try { lp.callback(lp.value, app.canvas, node); } catch (_) {} }
     }
     node.setDirtyCanvas(true, true);
@@ -169,29 +186,13 @@ app.registerExtension({
                 } else if (nodeData.name === "AnimaArtistStyleT8") {
                     addBtn(self, "🎨 艺术家库", () => openArtistGallery({
                         onApply: (lines, meta = {}) => {
-                            // 画师类：同时写 artist_tags + last_picked（原逻辑）
-                            if (meta.isArtist !== false) {
-                                const artistTokens = lines.map(formatArtistToken).filter(Boolean);
-                                appendArtistsToWidget(self, "artist_tags", artistTokens);
+                            // 该节点只接收画师类 token；IP 类提示用户
+                            if (meta.isArtist === false) {
+                                showToast("作品/角色 IP 请在 AnimaPromptT8 节点上打开该库");
                                 return;
                             }
-                            // IP / meta 类：不写 artist_tags（不进 STYLE_PROMPT），
-                            // 仅覆盖写入 last_picked 仅供预览图使用，
-                            // 这样运行后 PreviewImage 能看到 IP / 风格 meta 的代表作。
-                            const rawNames = (lines || []).map(l => {
-                                const t = (l || "").trim();
-                                const idx = t.lastIndexOf(":");
-                                return idx > 0 ? t.slice(0, idx).trim() : t;
-                            }).filter(Boolean);
-                            const lp = (self.widgets || []).find(w => w.name === "last_picked");
-                            if (lp) {
-                                lp.value = rawNames.join(", ");
-                                if (lp.callback) { try { lp.callback(lp.value, app.canvas, self); } catch (_) {} }
-                                self.setDirtyCanvas(true, true);
-                                showToast("已加入预览源（仅预览不进 STYLE_PROMPT）");
-                            } else {
-                                showToast("节点缺少 last_picked widget");
-                            }
+                            const artistTokens = lines.map(formatArtistToken).filter(Boolean);
+                            appendArtistsToWidget(self, "artist_tags", artistTokens);
                         },
                     }));
                 } else if (nodeData.name === "AnimaSavedPromptLoaderT8") {

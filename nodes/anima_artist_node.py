@@ -49,6 +49,34 @@ def _fetch_preview_pil(name: str, timeout: float = 8.0):
         return None
 
 
+def _strip_name_for_query(s: str) -> str:
+    """把任意形态的画师 token 化为纯 tag name（供 Danbooru 查询）。
+
+    接受：`wlop` / `@wlop` / `wlop:1.1` / `(@wlop:1.1)` / `(artist:wlop:1.1)`
+    返回：`wlop`
+    """
+    t = (s or "").strip()
+    if not t:
+        return ""
+    # 拆括号：(@wlop:1.1) → @wlop:1.1
+    if t.startswith("(") and t.endswith(")"):
+        t = t[1:-1].strip()
+    # 去 @ / artist: 前缀
+    if t.startswith("@"):
+        t = t[1:]
+    if t.startswith("artist:"):
+        t = t[len("artist:"):]
+    # 去尾部 :weight（仅当尾是纯数字时）
+    if ":" in t:
+        head, _, tail = t.rpartition(":")
+        try:
+            float(tail)
+            t = head
+        except ValueError:
+            pass
+    return t.strip()
+
+
 class AnimaArtistStyleT8:
     """艺术家风格输出节点。
 
@@ -128,6 +156,9 @@ class AnimaArtistStyleT8:
                 w = default_weight
 
             name = name.replace("(artist:", "").rstrip(")").strip()
+            # 去 @ 前缀，避免拿 @wlop 去查 Danbooru 一无所获
+            if name.startswith("@"):
+                name = name[1:].strip()
             if not name:
                 continue
             names.append(name)
@@ -146,20 +177,11 @@ class AnimaArtistStyleT8:
 
     @staticmethod
     def _parse_names(text: str) -> List[str]:
-        """从逗号 / 换行分隔的文本里提取纯 name 列表（去权重去括号）。"""
+        """从逗号 / 换行分隔的文本里提取纯 name 列表（去权重去括号去 @ 前缀）。"""
         out: List[str] = []
         for ln in (text or "").splitlines():
             for piece in ln.split(","):
-                t = piece.strip().strip(",")
-                if not t:
-                    continue
-                if t.startswith("(") and t.endswith(")"):
-                    t = t.strip("()").strip()
-                    if t.startswith("artist:"):
-                        t = t[len("artist:"):]
-                if ":" in t:
-                    t = t.rsplit(":", 1)[0].strip()
-                t = t.replace("(artist:", "").rstrip(")").strip()
+                t = _strip_name_for_query(piece.strip().strip(","))
                 if t:
                     out.append(t)
         return out
