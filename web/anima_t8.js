@@ -56,6 +56,29 @@ function appendArtistsToWidget(node, name, artistLines) {
     return true;
 }
 
+// 追加 token 列表到节点的 style widget（去重、保留原有内容）
+function appendTokensToStyle(node, newTokens) {
+    const w = (node.widgets || []).find(w => w.name === "style");
+    if (!w) { showToast("该节点未找到 style widget"); return false; }
+    const cur = (w.value || "").trim();
+    const tokens = cur ? cur.split(/[,\n]+/).map(s => s.trim()).filter(Boolean) : [];
+    const seen = new Set(tokens.map(t => t.toLowerCase()));
+    let added = 0;
+    for (const t of (newTokens || [])) {
+        const v = (t || "").trim();
+        if (!v) continue;
+        const key = v.toLowerCase();
+        if (!seen.has(key)) { tokens.push(v); seen.add(key); added++; }
+    }
+    if (added === 0) {
+        showToast("都已存在，未重复追加");
+        return true;
+    }
+    setWidgetValue(node, "style", tokens.join(", "));
+    showToast(`已追加到 STYLE：新增 ${added} 项`);
+    return true;
+}
+
 function applyPromptToNode(node, p) {
     if (!node) { showToast("未找到 Anima Prompt T8 节点"); return false; }
     if (!p) return false;
@@ -116,41 +139,27 @@ app.registerExtension({
             btn2.addEventListener("click", () => openArtistGallery({ onApply: (lines, meta = {}) => {
                 const isArtist = meta.isArtist !== false;
                 if (isArtist) {
+                    // 画师：优先选中的 AnimaArtistStyleT8 专用节点的 artist_tags widget
                     const node = findActiveAnimaArtistNode();
                     const artistTokens = lines.map(formatArtistToken).filter(Boolean);
                     if (node) { appendArtistsToWidget(node, "artist_tags", artistTokens); return; }
+                    // fallback：写到 AnimaPromptT8 节点的 style widget
                     const pn = findActiveAnimaPromptNode();
-                    if (pn) {
-                        const w = (pn.widgets || []).find(w => w.name === "style");
-                        if (w) {
-                            const cur = (w.value || "").trim();
-                            const merged = (cur ? cur + ", " : "") + artistTokens.join(", ");
-                            setWidgetValue(pn, "style", merged);
-                            return;
-                        }
-                    }
+                    if (pn) { appendTokensToStyle(pn, artistTokens); return; }
                     showToast("请在画布中选中 Anima 节点");
                 } else {
-                    // 作品 IP / 角色 IP：写入 positive widget，不加 artist: 前缀
+                    // 作品 IP / 角色 IP / 风格·meta：写入 STYLE widget（不再写 positive）
                     const pn = findActiveAnimaPromptNode();
-                    if (pn) {
-                        const w = (pn.widgets || []).find(w => w.name === "positive");
-                        if (w) {
-                            const cur = (w.value || "").trim();
-                            const segs = lines.map(l => {
-                                const idx = l.lastIndexOf(":");
-                                if (idx > 0) {
-                                    const name = l.slice(0, idx), wv = l.slice(idx + 1);
-                                    return `(${name}:${wv})`;
-                                }
-                                return l;
-                            });
-                            const merged = (cur ? cur + ", " : "") + segs.join(", ");
-                            setWidgetValue(pn, "positive", merged);
-                            return;
+                    if (!pn) { showToast("请在画布中选中 Anima Prompt T8 节点"); return; }
+                    const segs = lines.map(l => {
+                        const idx = l.lastIndexOf(":");
+                        if (idx > 0) {
+                            const name = l.slice(0, idx), wv = l.slice(idx + 1);
+                            return `(${name}:${wv})`;
                         }
-                    }
-                    showToast("请在画布中选中 Anima Prompt T8 节点");
+                        return l;
+                    }).filter(Boolean);
+                    appendTokensToStyle(pn, segs);
                 }
             }}));
             wrap.append(btn1, btn2);
@@ -172,22 +181,18 @@ app.registerExtension({
                     }));
                     addBtn(self, "🎨 艺术家 / IP 库", () => openArtistGallery({
                         onApply: (lines, meta = {}) => {
+                            // 所有选项（画师 / 作品 IP / 角色 IP / 风格·meta）全部追加到 style widget
                             const isArtist = meta.isArtist !== false;
-                            const targetName = isArtist ? "style" : "positive";
-                            const w = (self.widgets || []).find(w => w.name === targetName);
-                            if (!w) return;
-                            const cur = (w.value || "").trim();
                             const segs = lines.map(l => {
+                                if (isArtist) return formatArtistToken(l);
                                 const idx = l.lastIndexOf(":");
-                                let name = l, weight = "";
-                                if (idx > 0) { name = l.slice(0, idx); weight = l.slice(idx + 1); }
-                                if (isArtist) {
-                                    return formatArtistToken(l);
+                                if (idx > 0) {
+                                    const name = l.slice(0, idx), wv = l.slice(idx + 1);
+                                    return `(${name}:${wv})`;
                                 }
-                                return weight ? `(${name}:${weight})` : name;
-                            });
-                            const merged = (cur ? cur + ", " : "") + segs.join(", ");
-                            setWidgetValue(self, targetName, merged);
+                                return l;
+                            }).filter(Boolean);
+                            appendTokensToStyle(self, segs);
                         }
                     }));
                 } else if (nodeData.name === "AnimaArtistStyleT8") {
