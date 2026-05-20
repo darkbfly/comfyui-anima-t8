@@ -47,9 +47,24 @@ function appendArtistsToWidget(node, name, artistLines) {
     if (w.callback) { try { w.callback(w.value, app.canvas, node); } catch (_) {} }
     // 同时记录本次选中的画师到 last_picked widget（覆盖式），
     // 让节点 build() 仅对本次选中拉预览图。
+    // 重要：last_picked 必须是纯 name（无 @ / 无括号 / 无 artist: / 无 :weight），
+    // 否则后端 _fetch_preview_pil 会用 "@xxx" 去 Danbooru 查询导致 0 结果（黑图）。
     const lp = (node.widgets || []).find(w => w.name === "last_picked");
     if (lp) {
-        lp.value = (artistLines || []).map(l => (l || "").trim()).filter(Boolean).join(", ");
+        const cleanNames = (artistLines || []).map(l => {
+            let t = (l || "").trim();
+            if (!t) return "";
+            if (t.startsWith("(") && t.endsWith(")")) t = t.slice(1, -1).trim();
+            if (t.startsWith("artist:")) t = t.slice("artist:".length).trim();
+            if (t.startsWith("@")) t = t.slice(1).trim();
+            const idx = t.lastIndexOf(":");
+            if (idx > 0) {
+                const wv = t.slice(idx + 1).trim();
+                if (/^\d+(\.\d+)?$/.test(wv)) t = t.slice(0, idx).trim();
+            }
+            return t;
+        }).filter(Boolean);
+        lp.value = cleanNames.join(", ");
         if (lp.callback) { try { lp.callback(lp.value, app.canvas, node); } catch (_) {} }
     }
     node.setDirtyCanvas(true, true);

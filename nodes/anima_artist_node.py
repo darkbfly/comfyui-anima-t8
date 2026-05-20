@@ -111,6 +111,8 @@ class AnimaArtistStyleT8:
                     inner = inner[len("artist:"):]
                 if ":" in inner:
                     inner = inner.rsplit(":", 1)[0].strip()
+                if inner.startswith("@"):
+                    inner = inner[1:].strip()
                 if inner:
                     names.append(inner)
                 continue
@@ -130,7 +132,10 @@ class AnimaArtistStyleT8:
             name = name.replace("(artist:", "").rstrip(")").strip()
             if not name:
                 continue
-            names.append(name)
+            # name 应用于拼 prompt（保留 @ 前缀）；names 应用于预览图拉取（必须去 @）
+            preview_name = name[1:].strip() if name.startswith("@") else name
+            if preview_name:
+                names.append(preview_name)
 
             prefix = "artist:" if use_artist_prefix else ""
             if abs(w - 1.0) < 1e-3:
@@ -146,7 +151,7 @@ class AnimaArtistStyleT8:
 
     @staticmethod
     def _parse_names(text: str) -> List[str]:
-        """从逗号 / 换行分隔的文本里提取纯 name 列表（去权重去括号）。"""
+        """从逗号 / 换行分隔的文本里提取纯 name 列表（去权重去括号去 @ 前缀）。"""
         out: List[str] = []
         for ln in (text or "").splitlines():
             for piece in ln.split(","):
@@ -157,9 +162,13 @@ class AnimaArtistStyleT8:
                     t = t.strip("()").strip()
                     if t.startswith("artist:"):
                         t = t[len("artist:"):]
+                if t.startswith("@"):
+                    t = t[1:].strip()
                 if ":" in t:
                     t = t.rsplit(":", 1)[0].strip()
                 t = t.replace("(artist:", "").rstrip(")").strip()
+                if t.startswith("@"):
+                    t = t[1:].strip()
                 if t:
                     out.append(t)
         return out
