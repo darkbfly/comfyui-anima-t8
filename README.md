@@ -14,7 +14,7 @@ My favorite girl Go YounJung
 >
 > 风格库三段式（52 条预设 / 15 分类）+ 1000+ 画师库 + Danbooru 四类（画师 / 作品 IP / 角色 IP / 风格·meta）+ Civitai 一键抓取 + 实时风格预览图
 
-[![version](https://img.shields.io/badge/version-1.4.1-blue.svg)]()
+[![version](https://img.shields.io/badge/version-1.4.2-blue.svg)]()
 [![ComfyUI](https://img.shields.io/badge/ComfyUI-custom_node-green.svg)](https://github.com/comfyanonymous/ComfyUI)
 [![license](https://img.shields.io/badge/license-MIT-lightgrey.svg)]()
 
@@ -208,6 +208,10 @@ comfyui-anima-t8/
 ---
 
 ## 📝 版本历史
+
+### v1.4.2 (2026-05)
+- 🎨 **STYLE_PROMPT 输出格式修正**：原不论画师还是 IP/角色/meta 全部输出为 `(artist:xxx)`；改为按 `@` 标记区分：画师输出 `@name` / `(@name:weight)`，其他裸 `name` / `(name:weight)`。`use_artist_prefix` 语义重定义为“是否保留画师 `@` 前缀”
+- 🐛 **修复名字里右括号被误删**：原 `name.rstrip(")")` 会把合法名字中的尾部 `)` 吃掉（如 `kouji_(campus_life)` 变 `kouji_(campus_life`）；改为仅在左右括号不平衡时才逐个剔除
 
 ### v1.4.1 (2026-05)
 - 🐛 **修复 `last_picked` widget 被覆盖问题**：原 `appendArtistsToWidget` / `setLastPickedRaw` 是覆盖式写入，每次选新 token 都会清空之前的列表；改为累加去重（`a, b` + `b, c` → `a, b, c`），与上面 `artist_tags` widget 行为保持一致

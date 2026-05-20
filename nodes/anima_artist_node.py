@@ -130,11 +130,13 @@ class AnimaArtistStyleT8:
             line = raw.strip().strip(",")
             if not line:
                 continue
-            # 已带括号的整体直接保留
+            # 已带括号的整体直接保留（例如用户手输的 (artist:xxx:0.9)、(@wlop:1.1) 等）
             if line.startswith("(") and line.endswith(")"):
                 out.append(line)
-                # 从括号里提取 name（剩馆错误容忍）
+                # 从括号里提取 name（用于预览图）
                 inner = line.strip("()").strip()
+                if inner.startswith("@"):
+                    inner = inner[1:].strip()
                 if inner.startswith("artist:"):
                     inner = inner[len("artist:"):]
                 if ":" in inner:
@@ -142,6 +144,10 @@ class AnimaArtistStyleT8:
                 if inner:
                     names.append(inner)
                 continue
+            # 检测原始是否打了画师标记 @：决定输出用 @ 还是裸输出
+            is_artist = line.startswith("@")
+            if is_artist:
+                line = line[1:].strip()
             # 拆 weight
             if ":" in line:
                 parts = line.rsplit(":", 1)
@@ -155,19 +161,28 @@ class AnimaArtistStyleT8:
                 name = line
                 w = default_weight
 
-            name = name.replace("(artist:", "").rstrip(")").strip()
-            # 去 @ 前缀，避免拿 @wlop 去查 Danbooru 一无所获
+            # 入口安全重为纯 name（去双重括号、artist: 残留、多余 @）
+            name = name.replace("(artist:", "").strip()
+            # 仅在括号不平衡（被外层包裹丢了左括号）时才 rstrip，
+            # 避免误删合法名字里的右括号，例如 kouji_(campus_life)
+            while name.endswith(")") and name.count("(") < name.count(")"):
+                name = name[:-1]
             if name.startswith("@"):
                 name = name[1:].strip()
+            if name.startswith("artist:"):
+                name = name[len("artist:"):].strip()
             if not name:
                 continue
             names.append(name)
 
-            prefix = "artist:" if use_artist_prefix else ""
+            # 输出格式：
+            #   - 画师 (is_artist=True) 且 use_artist_prefix=True → @name / (@name:weight)
+            #   - 其他 → 裸 name / (name:weight)
+            tag = f"@{name}" if (is_artist and use_artist_prefix) else name
             if abs(w - 1.0) < 1e-3:
-                out.append(f"({prefix}{name})" if use_artist_prefix else name)
+                out.append(tag)
             else:
-                out.append(f"({prefix}{name}:{w:.2f})")
+                out.append(f"({tag}:{w:.2f})")
 
         prompt = ", ".join(out)
         # 预览图只对“本次选中”拉；为空才退回到 artist_tags 全部
