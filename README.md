@@ -14,7 +14,7 @@ My favorite girl Go YounJung
 >
 > 风格库三段式（52 条预设 / 15 分类）+ 1000+ 画师库 + Danbooru 四类（画师 / 作品 IP / 角色 IP / 风格·meta）+ Civitai 一键抓取 + 实时风格预览图
 
-[![version](https://img.shields.io/badge/version-1.2.0-blue.svg)]()
+[![version](https://img.shields.io/badge/version-1.3.0-blue.svg)]()
 [![ComfyUI](https://img.shields.io/badge/ComfyUI-custom_node-green.svg)](https://github.com/comfyanonymous/ComfyUI)
 [![license](https://img.shields.io/badge/license-MIT-lightgrey.svg)]()
 
@@ -208,6 +208,13 @@ comfyui-anima-t8/
 ---
 
 ## 📝 版本历史
+
+### v1.3.0 (2026-05)
+- 🔧 **风格库"应用"按字段映射 + 空字段保护**：模板某字段为空则不覆盖对应 widget，保护用户已选画师 / 已调节词；想强制清空可在模板里填一个空格
+- 🔧 **艺术家库统一写入 STYLE widget**：画师 / 作品 IP / 角色 IP / 风格·meta 全部去重追加到 [Anima Prompt T8](file:///f:/AnimaForge/comfyui-anima-t8/nodes/anima_prompt_node.py) 的 `style` 字段（不再污染 `positive` 主体词框）；新增公用工具 `appendTokensToStyle`
+- 🐛 **修复 PREVIEW_IMAGES 黑图**：v1.1 起 `last_picked` widget 写入了带 `@` 前缀的 token，后端 `_fetch_preview_pil` 拿 `@xxx` 查 Danbooru 永远 0 结果。前端写入时剥离 `@` / 括号 / `artist:` / `:weight`；后端 `_parse_names` + `build()` 同步剥离 `@` 作双保险
+- 🐛 **修复风格库"应用"按钮无反应**：兼容新版 ComfyUI Frontend `selected_nodes` 三态（Object / Array / Map），加 try/catch + 明确 toast；为 [AnimaSavedPromptLoaderT8](file:///f:/AnimaForge/comfyui-anima-t8/nodes/anima_loader_node.py) 节点补 `onApply` fallback（自动写到画布上的 [AnimaPromptT8](file:///f:/AnimaForge/comfyui-anima-t8/nodes/anima_prompt_node.py)）
+- 🧹 保留 `STYLE_PROMPT` 仍带 `@` 前缀（v1.1 行为不变）；保留 [AnimaArtistStyleT8](file:///f:/AnimaForge/comfyui-anima-t8/nodes/anima_artist_node.py) 节点的 `artist_tags` widget 专用路径
 
 ### v1.2.0 (2026-05)
 - ✨ **风格库扩充 12 → 52 条预设**，全部 Pony 兼容（开头 `score_9, score_8_up, score_7_up`）
