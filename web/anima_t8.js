@@ -30,6 +30,37 @@ function formatArtistToken(line) {
     return `@${t}`;
 }
 
+// 把任意 token 形态（@wlop / (@wlop:1.1) / artist:wlop / wlop:1.2）
+// 都化为纯 Danbooru tag name（wlop）。后端 _fetch_preview_pil 必须用纯名查图。
+function _stripToRawName(s) {
+    let t = (s || "").trim();
+    if (!t) return "";
+    if (t.startsWith("(") && t.endsWith(")")) t = t.slice(1, -1).trim();
+    if (t.startsWith("@")) t = t.slice(1);
+    if (t.startsWith("artist:")) t = t.slice("artist:".length);
+    const ci = t.lastIndexOf(":");
+    if (ci > 0) {
+        const tail = t.slice(ci + 1).trim();
+        if (/^[0-9.]+$/.test(tail)) t = t.slice(0, ci);
+    }
+    return t.trim();
+}
+
+// 累加去重写入 last_picked。已有 a, b 再追加 [b, c] → a, b, c。
+function _appendLastPicked(node, lines) {
+    const lp = (node.widgets || []).find(w => w.name === "last_picked");
+    if (!lp) return false;
+    const cur = (lp.value || "").trim();
+    const existed = cur ? cur.split(/[\n,]+/).map(s => s.trim()).filter(Boolean) : [];
+    (lines || []).forEach(l => {
+        const raw = _stripToRawName(l);
+        if (raw && !existed.includes(raw)) existed.push(raw);
+    });
+    lp.value = existed.join(", ");
+    if (lp.callback) { try { lp.callback(lp.value, app.canvas, node); } catch (_) {} }
+    return true;
+}
+
 function appendArtistsToWidget(node, name, artistLines) {
     const w = (node.widgets || []).find(w => w.name === name);
     if (!w) return false;
@@ -45,54 +76,19 @@ function appendArtistsToWidget(node, name, artistLines) {
     });
     w.value = tokens.join(", ");
     if (w.callback) { try { w.callback(w.value, app.canvas, node); } catch (_) {} }
-    // 同时记录本次选中的画师到 last_picked widget（覆盖式），
-    // 让节点 build() 仅对本次选中拉预览图。
-    // ⚠️ 后端 _fetch_preview_pil 会拿这个值去查 Danbooru，必须是纯 tag name——
-    //   必须 strip 掉 @ 前缀 / artist: 前缀 / 括号 / :weight，否则拉不出图变黑图。
-    const lp = (node.widgets || []).find(w => w.name === "last_picked");
-    if (lp) {
-        const rawNames = (artistLines || []).map(l => {
-            let s = (l || "").trim();
-            // 拆括号：(@wlop:1.1) → @wlop:1.1
-            if (s.startsWith("(") && s.endsWith(")")) s = s.slice(1, -1).trim();
-            // 去 @ / artist: 前缀
-            if (s.startsWith("@")) s = s.slice(1);
-            if (s.startsWith("artist:")) s = s.slice("artist:".length);
-            // 去尾部 :weight
-            const ci = s.lastIndexOf(":");
-            if (ci > 0) {
-                const tail = s.slice(ci + 1).trim();
-                if (/^[0-9.]+$/.test(tail)) s = s.slice(0, ci);
-            }
-            return s.trim();
-        }).filter(Boolean);
-        lp.value = rawNames.join(", ");
-        if (lp.callback) { try { lp.callback(lp.value, app.canvas, node); } catch (_) {} }
-    }
+    // 同步累加 last_picked（去重）。
+    // ⚠️ 后端 _fetch_preview_pil 会拿这个值去查 Danbooru，必须是纯 tag name。
+    _appendLastPicked(node, artistLines);
     node.setDirtyCanvas(true, true);
     return true;
 }
 
-// 覆盖式写 last_picked widget，强制 strip 为纯 tag name（供 PREVIEW_IMAGES 拉 Danbooru 预览图）。
+// 累加式写 last_picked widget（去重），强制 strip 为纯 tag name。
 // 适用于作品 IP / 角色 IP / 风格·meta 这类非画师 token：
-//   不写 artist_tags（避免污染 STYLE_PROMPT），仅写 last_picked 让节点运行时拉预览图。
+//   不写 artist_tags（避免污染 STYLE_PROMPT），仅追加 last_picked 让节点运行时拉预览图。
 function setLastPickedRaw(node, lines) {
-    const lp = (node.widgets || []).find(w => w.name === "last_picked");
-    if (!lp) return false;
-    const rawNames = (lines || []).map(l => {
-        let s = (l || "").trim();
-        if (s.startsWith("(") && s.endsWith(")")) s = s.slice(1, -1).trim();
-        if (s.startsWith("@")) s = s.slice(1);
-        if (s.startsWith("artist:")) s = s.slice("artist:".length);
-        const ci = s.lastIndexOf(":");
-        if (ci > 0) {
-            const tail = s.slice(ci + 1).trim();
-            if (/^[0-9.]+$/.test(tail)) s = s.slice(0, ci);
-        }
-        return s.trim();
-    }).filter(Boolean);
-    lp.value = rawNames.join(", ");
-    if (lp.callback) { try { lp.callback(lp.value, app.canvas, node); } catch (_) {} }
+    const ok = _appendLastPicked(node, lines);
+    if (!ok) return false;
     node.setDirtyCanvas(true, true);
     return true;
 }
