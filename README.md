@@ -14,7 +14,7 @@ My favorite girl Go YounJung
 >
 > 风格库三段式（52 条预设 / 15 分类）+ 1000+ 画师库 + Danbooru 四类（画师 / 作品 IP / 角色 IP / 风格·meta）+ Civitai 一键抓取 + 实时风格预览图
 
-[![version](https://img.shields.io/badge/version-1.3.0-blue.svg)]()
+[![version](https://img.shields.io/badge/version-1.4.0-blue.svg)]()
 [![ComfyUI](https://img.shields.io/badge/ComfyUI-custom_node-green.svg)](https://github.com/comfyanonymous/ComfyUI)
 [![license](https://img.shields.io/badge/license-MIT-lightgrey.svg)]()
 
@@ -208,6 +208,13 @@ comfyui-anima-t8/
 ---
 
 ## 📝 版本历史
+
+### v1.4.0 (2026-05)
+- 🐛 **修复预览图黑屏（last_picked 带 `@` 前缀）**：前端 `appendArtistsToWidget` 写 `last_picked` 时剥离 `@` / 括号 / `artist:` / `:weight`；后端新增 `_strip_name_for_query` 工具，`_parse_names` + `build()` 同步剥离 `@` 作双保险，避免 Danbooru 查询返回 0 结果触发 64×64 黑图兜底
+- 🐛 **修复 [AnimaArtistStyleT8](file:///f:/AnimaForge/comfyui-anima-t8/nodes/anima_artist_node.py) 节点上 IP/角色/风格·meta 运行无反应**：原逻辑遇到非画师类直接 toast 拒绝；改为写入 `last_picked`（用于 PREVIEW_IMAGES 拉 Danbooru 代表作首图，不污染 `STYLE_PROMPT`）+ 同步追加到画布 [AnimaPromptT8](file:///f:/AnimaForge/comfyui-anima-t8/nodes/anima_prompt_node.py) 的 `positive` widget；新增 helper `setLastPickedRaw`
+- 🎨 **预览图改为等比缩放 + 居中黑边填充（letterbox）**：替换原 `im.resize((512, 768))` 强制拉伸；用 `min(512/w, 768/h)` 算缩放比例后 `Image.LANCZOS` 缩放，再 paste 到 (512, 768) 黑底画布居中位置；保持 ComfyUI batch tensor 形状一致，画面不再变形
+- 🛠 **Civitai 拉取 0 条修复**：兼容 2026 年新 meta 结构变体（直 `meta.prompt` / 嵌套 `meta.meta` / ComfyUI workflow JSON）；新增 `_extract_from_comfy_workflow`（按 `_meta.title` 区分 Positive/Negative，支持 `["nodeId", 0]` 引用追溯最深 4 层）；新增 `_extract_score`（reactionCount fallback heart+like+laugh+cry+comment）
+- ✨ **Civitai 自动归类**：新增 `_auto_classify` + 14 组优先级关键词（画质 / 媒介 / 光影 / 镜头 / 构图 / 服装 / 表情 / 季节 / 时代 / 场景 / 风格 / 情绪 / 角色 / NSFW），每条模板按 prompt 内容自动打 ≤3 个分类 tag
 
 ### v1.3.0 (2026-05)
 - 🔧 **风格库"应用"按字段映射 + 空字段保护**：模板某字段为空则不覆盖对应 widget，保护用户已选画师 / 已调节词；想强制清空可在模板里填一个空格

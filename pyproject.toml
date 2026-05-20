@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-anima-t8"
 description = "Anima 动漫提示词生成器：风格库（52 预设 / 15 分类，三段式 + 标签/搜索/收藏/置顶） + 1000+ 画师库 + Danbooru 四类标签（画师/作品IP/角色IP/风格·meta） + Civitai 一键抓取 + 实时风格预览图。完美适配 ComfyUI。"
-version = "1.3.0"
+version = "1.4.0"
 license = { text = "MIT" }
 dependencies = ["requests"]
 
