@@ -59,15 +59,29 @@ function appendArtistsToWidget(node, name, artistLines) {
 function applyPromptToNode(node, p) {
     if (!node) { showToast("未找到 Anima Prompt T8 节点"); return false; }
     if (!p) return false;
-    let any = false;
-    if (setWidgetValue(node, "positive", p.positive_prompt || "")) any = true;
-    if (setWidgetValue(node, "negative", p.negative_prompt || "")) any = true;
-    if (setWidgetValue(node, "style", p.artist_prompt || "")) any = true;
-    if (!any) {
+    // 语义：模板某字段为空则不覆盖该 widget（保护用户已选画师/已调节词）。
+    // 想强制清空某字段，可在模板里填一个空格。
+    const fields = [
+        ["positive", p.positive_prompt],
+        ["negative", p.negative_prompt],
+        ["style",    p.artist_prompt],
+    ];
+    const written = [];
+    const skipped = [];
+    let touched = false;
+    for (const [name, val] of fields) {
+        if (val === undefined || val === null || val === "") { skipped.push(name); continue; }
+        if (setWidgetValue(node, name, val)) {
+            written.push(name);
+            touched = true;
+        }
+    }
+    if (!touched) {
         showToast("该节点未找到 positive/negative/style widget\u3002\u8BF7\u4F7F\u7528 AnimaPromptT8 \u8282\u70B9\u3002");
         return false;
     }
-    showToast("已应用：" + (p.title || ""));
+    const skipMsg = skipped.length ? `（保留 ${skipped.join("/")}）` : "";
+    showToast(`已应用：${p.title || ""} → ${written.join(", ")}${skipMsg}`);
     return true;
 }
 
