@@ -14,7 +14,7 @@ My favorite girl Go YounJung
 >
 > 风格库三段式（52 条预设 / 15 分类）+ 1000+ 画师库 + Danbooru 四类（画师 / 作品 IP / 角色 IP / 风格·meta）+ Civitai 一键抓取 + 实时风格预览图
 
-[![version](https://img.shields.io/badge/version-1.4.0-blue.svg)]()
+[![version](https://img.shields.io/badge/version-1.4.1-blue.svg)]()
 [![ComfyUI](https://img.shields.io/badge/ComfyUI-custom_node-green.svg)](https://github.com/comfyanonymous/ComfyUI)
 [![license](https://img.shields.io/badge/license-MIT-lightgrey.svg)]()
 
@@ -208,6 +208,10 @@ comfyui-anima-t8/
 ---
 
 ## 📝 版本历史
+
+### v1.4.1 (2026-05)
+- 🐛 **修复 `last_picked` widget 被覆盖问题**：原 `appendArtistsToWidget` / `setLastPickedRaw` 是覆盖式写入，每次选新 token 都会清空之前的列表；改为累加去重（`a, b` + `b, c` → `a, b, c`），与上面 `artist_tags` widget 行为保持一致
+- ♻️ **抽出 helper `_stripToRawName` / `_appendLastPicked`**：去重复的 token 归一化逻辑（括号 / `@` / `artist:` / `:weight` 剥离）集中到一处，避免两处维护不同步
 
 ### v1.4.0 (2026-05)
 - 🐛 **修复预览图黑屏（last_picked 带 `@` 前缀）**：前端 `appendArtistsToWidget` 写 `last_picked` 时剥离 `@` / 括号 / `artist:` / `:weight`；后端新增 `_strip_name_for_query` 工具，`_parse_names` + `build()` 同步剥离 `@` 作双保险，避免 Danbooru 查询返回 0 结果触发 64×64 黑图兜底
