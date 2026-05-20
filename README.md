@@ -14,7 +14,7 @@ My favorite girl Go YounJung
 >
 > 风格库三段式（52 条预设 / 15 分类）+ 1000+ 画师库 + Danbooru 四类（画师 / 作品 IP / 角色 IP / 风格·meta）+ Civitai 一键抓取 + 实时风格预览图
 
-[![version](https://img.shields.io/badge/version-1.4.2-blue.svg)]()
+[![version](https://img.shields.io/badge/version-1.4.3-blue.svg)]()
 [![ComfyUI](https://img.shields.io/badge/ComfyUI-custom_node-green.svg)](https://github.com/comfyanonymous/ComfyUI)
 [![license](https://img.shields.io/badge/license-MIT-lightgrey.svg)]()
 
@@ -208,6 +208,9 @@ comfyui-anima-t8/
 ---
 
 ## 📝 版本历史
+
+### v1.4.3 (2026-05)
+- 🎨 **STYLE_PROMPT 合并 `last_picked` 额外 token**：`last_picked` 里不在 `artist_tags` 中的裸 token（作品 IP / 角色 IP / 风格·meta 等）以裸名追加输出，以 `, ` 连接。例：`artist_tags=@dairi, @ebifurya` + `last_picked=dairi, ebifurya, original` → `@dairi, @ebifurya, original`（画师去重，额外 meta 追加）
 
 ### v1.4.2 (2026-05)
 - 🎨 **STYLE_PROMPT 输出格式修正**：原不论画师还是 IP/角色/meta 全部输出为 `(artist:xxx)`；改为按 `@` 标记区分：画师输出 `@name` / `(@name:weight)`，其他裸 `name` / `(name:weight)`。`use_artist_prefix` 语义重定义为“是否保留画师 `@` 前缀”

@@ -185,7 +185,23 @@ class AnimaArtistStyleT8:
                 out.append(f"({tag}:{w:.2f})")
 
         prompt = ", ".join(out)
-        # 预览图只对“本次选中”拉；为空才退回到 artist_tags 全部
+        # 合并 last_picked 中不在 artist_tags 里的额外 token（作品 IP / 角色 IP / 风格·meta 等）。
+        # last_picked 是裸 name（前端 strip 过 @）——追加输出也用裸名，以 ", " 连接。
+        existing_lower = {n.lower() for n in names}
+        extras: List[str] = []
+        seen_extra = set()
+        for t in self._parse_names(last_picked):
+            if not t:
+                continue
+            tl = t.lower()
+            if tl in existing_lower or tl in seen_extra:
+                continue
+            seen_extra.add(tl)
+            extras.append(t)
+        if extras:
+            extra_str = ", ".join(extras)
+            prompt = (prompt + ", " + extra_str) if prompt else extra_str
+        # 预览图：优先拉 last_picked（含额外项）；为空才退回到 artist_tags 全部
         preview_names = self._parse_names(last_picked) if (last_picked or "").strip() else names
         preview = self._build_preview_tensor(preview_names)
         return (prompt, preview)
