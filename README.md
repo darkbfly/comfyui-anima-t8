@@ -1,4 +1,5 @@
-# 网站：[https://ai.t8star.org](https://ai.t8star.org/register?aff=dP7j)
+# 贞贞网站：[https://ai.t8star.org](https://ai.t8star.org/register?aff=dP7j)
+# 致谢企鹅的云端画布：[https://art.pebbling.cn](https://art.pebbling.cn/?invite=T8STAR)
 # Online workflow overseas：
 https://www.runninghub.ai/?inviteCode=rh-v1121
 # 在线工作流国内版：
