@@ -1,4 +1,4 @@
-# 网站：[https://ai.t8star.org](https://ai.t8star.org/register?aff=cbff0534884)
+# 网站：[https://ai.t8star.org](https://ai.t8star.org/register?aff=dP7j)
 # Online workflow overseas：
 https://www.runninghub.ai/?inviteCode=rh-v1121
 # 在线工作流国内版：
