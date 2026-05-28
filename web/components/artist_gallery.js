@@ -10,6 +10,23 @@ const PLACEHOLDER_SVG = "data:image/svg+xml;utf8," + encodeURIComponent(
     "</linearGradient></defs><rect width='3' height='4' fill=\"url(%23g)\"/></svg>"
 );
 
+const DANBOORU_POSTS_BASE = "https://danbooru.donmai.us/posts?tags=";
+
+function danbooruPostsUrl(tagName) {
+    const t = (tagName || "").trim();
+    if (!t) return "";
+    return DANBOORU_POSTS_BASE + encodeURIComponent(t);
+}
+
+function openDanbooruTag(tagName) {
+    const url = danbooruPostsUrl(tagName);
+    if (!url) {
+        showToast("无法生成 Danbooru 链接");
+        return;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+}
+
 /**
  * Tab 配置
  *  - moo  ： mooshieblob 画师库（带预览图）
@@ -315,6 +332,10 @@ export function openArtistGallery({ onApply } = {}) {
             a.image_url ? el("img", { src: a.image_url, referrerpolicy: "no-referrer" }) : el("div", { class: "anima-t8-empty" }, "无预览图"),
             el("div", { class: "anima-t8-preview-actions" },
                 el("button", { class: "anima-t8-btn", onclick: () => m.remove() }, "关闭"),
+                el("button", {
+                    class: "anima-t8-btn",
+                    onclick: () => openDanbooruTag(itemId(a)),
+                }, "打开 Danbooru"),
                 el("button", { class: "anima-t8-btn primary", onclick: insertAndClose }, "➜ 一键添加"),
             ),
         ));
