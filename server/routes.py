@@ -10,12 +10,14 @@ try:
     from core import prompt_manager, tag_manager
     from core.artist_manager import get_artist_manager
     from core.danbooru_manager import get_danbooru_manager
+    from core.gelbooru_manager import get_gelbooru_manager
     from core.db import DEFAULT_NEGATIVE_PROMPT
     from api import civitai_client
 except Exception:
     from ..core import prompt_manager, tag_manager
     from ..core.artist_manager import get_artist_manager
     from ..core.danbooru_manager import get_danbooru_manager
+    from ..core.gelbooru_manager import get_gelbooru_manager
     from ..core.db import DEFAULT_NEGATIVE_PROMPT
     from ..api import civitai_client
 
@@ -411,6 +413,130 @@ def register_routes():
             traceback.print_exc()
             return _err("预览图获取失败：" + str(e), 500)
 
+    # ---------- Gelbooru tags（artist / copyright / character / general） ----------
+    _gel_bg_fetch_running: dict = {}
+
+    @routes.get("/anima_t8/gtags")
+    async def list_gtags(request: web.Request):
+        q = request.query
+        loop = request.app.loop
+        mgr = get_gelbooru_manager()
+        try:
+            category = q.get("category", "artist")
+            current_count = await loop.run_in_executor(None, lambda: mgr.count(category))
+            if current_count == 0:
+                await loop.run_in_executor(None, lambda: mgr.fetch(category, max_pages=2))
+                if not _gel_bg_fetch_running.get(category):
+                    _gel_bg_fetch_running[category] = True
+
+                    def _bg_fill(cat=category):
+                        try:
+                            mgr.fetch(cat, force_refresh=True, max_pages=10)
+                        except Exception as ex:
+                            print(f"[anima_t8] gelbooru bg fetch fail cat={cat}: {ex}")
+                        finally:
+                            _gel_bg_fetch_running[cat] = False
+
+                    loop.run_in_executor(None, _bg_fill)
+            result = await loop.run_in_executor(
+                None,
+                lambda: mgr.search(
+                    category=category,
+                    keyword=q.get("q", ""),
+                    page=int(q.get("page", "1") or 1),
+                    page_size=int(q.get("page_size", "60") or 60),
+                    pinned_only=q.get("pinned") == "1",
+                    letter=q.get("letter", ""),
+                ),
+            )
+            result["backfilling"] = bool(_gel_bg_fetch_running.get(category))
+            return _ok(result)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return _err("Gelbooru 标签读取失败：" + str(e), 500)
+
+    @routes.post("/anima_t8/gtags/refresh")
+    async def refresh_gtags(request: web.Request):
+        loop = request.app.loop
+        mgr = get_gelbooru_manager()
+        try:
+            try:
+                body = await request.json()
+            except Exception:
+                body = {}
+            category = body.get("category") or request.query.get("category", "artist")
+            n = await loop.run_in_executor(
+                None, lambda: mgr.fetch(category, force_refresh=True))
+            return _ok({"count": n, "category": category})
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return _err("Gelbooru 刷新失败：" + str(e), 500)
+
+    @routes.post("/anima_t8/gtags/pin")
+    async def pin_gtag(request: web.Request):
+        try:
+            body = await request.json()
+        except Exception:
+            return _err("invalid json")
+        name = (body.get("name") or "").strip()
+        category = body.get("category") or "artist"
+        pinned = bool(body.get("pinned", True))
+        if not name:
+            return _err("name required")
+        get_gelbooru_manager().set_pinned(name, category, pinned)
+        return _ok()
+
+    @routes.get("/anima_t8/gtags/image")
+    async def proxy_gtag_image(request: web.Request):
+        """代理 Gelbooru 图片，让浏览器从同源拿图。"""
+        u = request.query.get("u", "")
+        if not u:
+            return _err("u required")
+        from urllib.parse import urlparse
+        parsed = urlparse(u)
+        hostname = (parsed.hostname or "").lower()
+        if hostname != "gelbooru.com" and not hostname.endswith(".gelbooru.com"):
+            return _err("hostname not allowed: " + str(parsed.hostname))
+
+        def _fetch():
+            import ssl as _ssl
+            import urllib.request as _ur
+            ctx = _ssl.create_default_context()
+            req = _ur.Request(u, headers={
+                "User-Agent": "AnimaForge/1.0",
+                "Referer": "https://gelbooru.com/",
+            })
+            with _ur.urlopen(req, timeout=15, context=ctx) as r:
+                return r.read(), r.headers.get("Content-Type", "image/jpeg")
+
+        try:
+            loop = request.app.loop
+            body, ctype = await loop.run_in_executor(None, _fetch)
+            return web.Response(body=body, content_type=ctype, headers={
+                "Cache-Control": "public, max-age=86400",
+            })
+        except Exception as e:
+            print(f"[anima_t8] gelbooru image proxy failed url={u}: {e}")
+            return _err("proxy failed: " + str(e), 502)
+
+    @routes.get("/anima_t8/gtags/preview")
+    async def preview_gtag(request: web.Request):
+        name = (request.query.get("name") or "").strip()
+        if not name:
+            return _err("name required")
+        try:
+            loop = request.app.loop
+            data = await loop.run_in_executor(
+                None, lambda: get_gelbooru_manager().fetch_preview(name)
+            )
+            return _ok(data)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return _err("Gelbooru 预览图获取失败：" + str(e), 500)
+
     # ---------- 片段收藏 ----------
     @routes.get("/anima_t8/snippets")
     async def list_snippets(request: web.Request):
@@ -453,4 +579,4 @@ def register_routes():
         cnt = prompt_manager.import_all(body or {}, replace=bool(body.get("__replace")))
         return _ok(cnt)
 
-    print("[anima_t8] 已注册 HTTP 路由（含 Danbooru tags + Civitai 模板抓取）")
+    print("[anima_t8] 已注册 HTTP 路由（含 Danbooru/Gelbooru tags + Civitai 模板抓取）")
