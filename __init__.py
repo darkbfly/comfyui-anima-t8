@@ -23,18 +23,21 @@ try:
     from .nodes.anima_artist_node import AnimaArtistStyleT8
     from .nodes.anima_combiner_node import AnimaPromptCombinerT8
     from .nodes.anima_loader_node import AnimaSavedPromptLoaderT8
+    from .nodes.gelbooru_style_node import AnimaGelbooruStyleT8
 
     NODE_CLASS_MAPPINGS.update({
         "AnimaPromptT8": AnimaPromptT8,
         "AnimaArtistStyleT8": AnimaArtistStyleT8,
         "AnimaPromptCombinerT8": AnimaPromptCombinerT8,
         "AnimaSavedPromptLoaderT8": AnimaSavedPromptLoaderT8,
+        "AnimaGelbooruStyleT8": AnimaGelbooruStyleT8,
     })
     NODE_DISPLAY_NAME_MAPPINGS.update({
         "AnimaPromptT8": "Anima Prompt T8",
         "AnimaArtistStyleT8": "Anima Artist Style T8",
         "AnimaPromptCombinerT8": "Anima Prompt Combiner T8",
         "AnimaSavedPromptLoaderT8": "Anima Saved Prompt Loader T8",
+        "AnimaGelbooruStyleT8": "Anima Gelbooru Style T8",
     })
 except Exception:
     print("[comfyui-anima-t8] 节点加载失败：")

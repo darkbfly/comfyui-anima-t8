@@ -3,6 +3,7 @@ import { app } from "../../scripts/app.js";
 import { loadStyle, showToast } from "./components/tag_chip.js";
 import { openPromptPanel } from "./components/prompt_panel.js";
 import { openArtistGallery } from "./components/artist_gallery.js";
+import { openGelbooruGallery } from "./components/gelbooru_gallery.js";
 
 const STYLE_HREF = "/extensions/comfyui-anima-t8/styles/anima_t8.css";
 
@@ -28,6 +29,30 @@ function formatArtistToken(line) {
         return weight ? `(@${name}:${weight})` : `@${name}`;
     }
     return `@${t}`;
+}
+
+function formatPlainWeightedToken(line) {
+    const t = (line || "").trim();
+    if (!t) return "";
+    const idx = t.lastIndexOf(":");
+    if (idx > 0) {
+        const name = t.slice(0, idx).trim();
+        const weight = t.slice(idx + 1).trim();
+        return `(${name}:${weight})`;
+    }
+    return t;
+}
+
+function appendPromptTokens(node, name, lines, isArtist) {
+    const w = (node.widgets || []).find(w => w.name === name);
+    if (!w) return false;
+    const cur = (w.value || "").trim();
+    const segs = lines
+        .map(l => isArtist ? formatArtistToken(l) : formatPlainWeightedToken(l))
+        .filter(Boolean);
+    if (!segs.length) return false;
+    setWidgetValue(node, name, (cur ? cur + ", " : "") + segs.join(", "));
+    return true;
 }
 
 // 把任意 token 形态（@wlop / (@wlop:1.1) / artist:wlop / wlop:1.2）
@@ -104,6 +129,7 @@ function applyPromptToNode(node, p) {
 const ANIMA_NODES = new Set([
     "AnimaPromptT8",
     "AnimaArtistStyleT8",
+    "AnimaGelbooruStyleT8",
     "AnimaPromptCombinerT8",
     "AnimaSavedPromptLoaderT8",
 ]);
@@ -166,7 +192,27 @@ app.registerExtension({
                     showToast("请在画布中选中 Anima Prompt T8 节点");
                 }
             }}));
-            wrap.append(btn1, btn2);
+            const btn3 = document.createElement("button");
+            btn3.className = "comfy-button"; btn3.textContent = "🌐 Gelbooru 标签库";
+            btn3.addEventListener("click", () => openGelbooruGallery({ onApply: (lines, meta = {}) => {
+                const isArtist = meta.isArtist !== false;
+                if (isArtist) {
+                    const node = findActiveAnimaGelbooruNode();
+                    const artistTokens = lines.map(formatArtistToken).filter(Boolean);
+                    if (node) { appendArtistsToWidget(node, "gelbooru_tags", artistTokens); return; }
+                    const pn = findActiveAnimaPromptNode();
+                    if (pn && appendPromptTokens(pn, "style", lines, true)) return;
+                    showToast("请在画布中选中 Anima Gelbooru 或 Anima Prompt 节点");
+                } else {
+                    const gelNode = findActiveAnimaGelbooruNode();
+                    if (gelNode) setLastPickedRaw(gelNode, lines);
+                    const pn = findActiveAnimaPromptNode();
+                    if (pn && appendPromptTokens(pn, "positive", lines, false)) return;
+                    if (gelNode) { showToast("已加入 Gelbooru 预览图列表，运行节点查看"); return; }
+                    showToast("请在画布中选中 Anima Prompt T8 节点");
+                }
+            }}));
+            wrap.append(btn1, btn2, btn3);
             try { app.menu.element.append(wrap); } catch (_) {}
         }
     },
@@ -203,6 +249,12 @@ app.registerExtension({
                             setWidgetValue(self, targetName, merged);
                         }
                     }));
+                    addBtn(self, "🌐 Gelbooru 标签库", () => openGelbooruGallery({
+                        onApply: (lines, meta = {}) => {
+                            const isArtist = meta.isArtist !== false;
+                            appendPromptTokens(self, isArtist ? "style" : "positive", lines, isArtist);
+                        }
+                    }));
                 } else if (nodeData.name === "AnimaArtistStyleT8") {
                     addBtn(self, "🎨 艺术家库", () => openArtistGallery({
                         onApply: (lines, meta = {}) => {
@@ -235,6 +287,21 @@ app.registerExtension({
                                 }
                             }
                             showToast("已加入预览图列表，运行节点查看");
+                        },
+                    }));
+                } else if (nodeData.name === "AnimaGelbooruStyleT8") {
+                    addBtn(self, "🌐 Gelbooru 标签库", () => openGelbooruGallery({
+                        onApply: (lines, meta = {}) => {
+                            const isArtist = meta.isArtist !== false;
+                            if (isArtist) {
+                                const artistTokens = lines.map(formatArtistToken).filter(Boolean);
+                                appendArtistsToWidget(self, "gelbooru_tags", artistTokens);
+                                return;
+                            }
+                            setLastPickedRaw(self, lines);
+                            const pn = findActiveAnimaPromptNode();
+                            if (pn) appendPromptTokens(pn, "positive", lines, false);
+                            showToast("已加入 Gelbooru 预览图列表，运行节点查看");
                         },
                     }));
                 } else if (nodeData.name === "AnimaSavedPromptLoaderT8") {
@@ -274,4 +341,16 @@ function findActiveAnimaArtistNode() {
     }
     const nodes = app.graph?._nodes || [];
     return nodes.find(n => n.comfyClass === "AnimaArtistStyleT8" || n.type === "AnimaArtistStyleT8");
+}
+
+function findActiveAnimaGelbooruNode() {
+    const sel = app.canvas?.selected_nodes;
+    if (sel) {
+        for (const id in sel) {
+            const n = sel[id];
+            if (n && (n.comfyClass === "AnimaGelbooruStyleT8" || n.type === "AnimaGelbooruStyleT8")) return n;
+        }
+    }
+    const nodes = app.graph?._nodes || [];
+    return nodes.find(n => n.comfyClass === "AnimaGelbooruStyleT8" || n.type === "AnimaGelbooruStyleT8");
 }
