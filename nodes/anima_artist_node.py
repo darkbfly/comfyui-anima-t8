@@ -25,16 +25,19 @@ def _fetch_preview_pil(name: str, timeout: float = 8.0):
         print("[anima_t8] Pillow 未安装，无法生成预览图")
         return None
     tag_q = urllib.parse.quote(name, safe=":/_")
-    api = f"{DANBOORU_BASE}/posts.json?tags={tag_q}&limit=1"
+    api = f"{DANBOORU_BASE}/posts.json?tags={tag_q}&limit=8"
     try:
         req = urllib.request.Request(api, headers={"User-Agent": _USER_AGENT})
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             data = json.loads(resp.read().decode("utf-8", errors="ignore"))
         if not isinstance(data, list) or not data:
             return None
-        p = data[0]
-        img_url = (p.get("large_file_url") or p.get("preview_file_url")
-                   or p.get("file_url") or "")
+        img_url = ""
+        for p in data:
+            img_url = (p.get("large_file_url") or p.get("preview_file_url")
+                       or p.get("file_url") or "")
+            if img_url:
+                break
         if not img_url:
             return None
         req2 = urllib.request.Request(img_url, headers={

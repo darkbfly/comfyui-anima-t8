@@ -173,7 +173,7 @@ class DanbooruManager:
         # tag 中可能含括号等字符，urlencode 仅会处理路径中不安全的字符
         tag_q = urllib.parse.quote(name, safe=":/_")
         url = (f"{DANBOORU_BASE}/posts.json"
-               f"?tags={tag_q}&limit=1")
+               f"?tags={tag_q}&limit=8")
         result = {"image_url": "", "sample_url": "", "source_url": ""}
         try:
             req = urllib.request.Request(url, headers={"User-Agent": "AnimaForge/1.0"})
@@ -183,18 +183,19 @@ class DanbooruManager:
                 raw = resp.read().decode("utf-8", errors="ignore")
             data = json.loads(raw) if raw else []
             if isinstance(data, list) and data:
-                p = data[0]
-                # 原始 URL（可能在 cdn.donmai.us）
-                preview_raw = (p.get("preview_file_url") or
-                               p.get("large_file_url") or
-                               p.get("file_url") or "")
-                sample_raw = p.get("large_file_url") or p.get("file_url") or ""
-                # 转成同源代理 URL，避免浏览器直连 donmai 被防盗链/CSP/网络拦截
-                if preview_raw:
+                for p in data:
+                    # 原始 URL（可能在 cdn.donmai.us）
+                    preview_raw = (p.get("preview_file_url") or
+                                   p.get("large_file_url") or
+                                   p.get("file_url") or "")
+                    if not preview_raw:
+                        continue
+                    sample_raw = p.get("large_file_url") or p.get("file_url") or preview_raw
+                    # 转成同源代理 URL，避免浏览器直连 donmai 被防盗链/CSP/网络拦截
                     result["image_url"] = "/anima_t8/dtags/image?u=" + urllib.parse.quote(preview_raw, safe="")
-                if sample_raw:
                     result["sample_url"] = "/anima_t8/dtags/image?u=" + urllib.parse.quote(sample_raw, safe="")
-                result["source_url"] = f"{DANBOORU_BASE}/posts/{p.get('id')}" if p.get("id") else ""
+                    result["source_url"] = f"{DANBOORU_BASE}/posts/{p.get('id')}" if p.get("id") else ""
+                    break
             print(f"[anima_t8] preview {name} -> {'OK' if result['image_url'] else 'EMPTY'} ({(time.time()-t0)*1000:.0f}ms)")
         except Exception as e:
             print(f"[anima_t8] danbooru preview fetch failed name={name}: {e}")

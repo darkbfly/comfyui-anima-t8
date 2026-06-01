@@ -1,5 +1,6 @@
 // comfyui-anima-t8 入口：注入 ComfyUI 扩展
 import { app } from "../../scripts/app.js";
+import { ComfyWidgets } from "../../scripts/widgets.js";
 import { loadStyle, showToast } from "./components/tag_chip.js";
 import { openPromptPanel } from "./components/prompt_panel.js";
 import { openArtistGallery } from "./components/artist_gallery.js";
@@ -107,6 +108,210 @@ const ANIMA_NODES = new Set([
     "AnimaPromptCombinerT8",
     "AnimaSavedPromptLoaderT8",
 ]);
+
+const COMBINER_PART_PREFIX = "part_";
+const COMBINER_MIN_PARTS = 2;
+const COMBINER_MAX_PARTS = 20;
+const COMBINER_CONTROL_NAME = "parts";
+
+function getCombinerPartWidgets(node) {
+    return (node.widgets || []).filter(w => w.name?.startsWith(COMBINER_PART_PREFIX));
+}
+
+function getCombinerPartInputs(node) {
+    return (node.inputs || []).filter(input => input.name?.startsWith(COMBINER_PART_PREFIX));
+}
+
+function combinerPartIndex(name) {
+    const m = /^part_(\d+)$/.exec(name || "");
+    return m ? parseInt(m[1], 10) : 0;
+}
+
+function getCombinerPartCount(node) {
+    let max = 0;
+    for (const part of [...getCombinerPartWidgets(node), ...getCombinerPartInputs(node)]) {
+        max = Math.max(max, combinerPartIndex(part.name));
+    }
+    return max;
+}
+
+function nextCombinerPartName(node) {
+    return `${COMBINER_PART_PREFIX}${getCombinerPartCount(node) + 1}`;
+}
+
+function renumberCombinerParts(node) {
+    const parts = [...getCombinerPartWidgets(node), ...getCombinerPartInputs(node)].sort(
+        (a, b) => combinerPartIndex(a.name) - combinerPartIndex(b.name)
+    );
+    parts.forEach((part, i) => {
+        part.name = `${COMBINER_PART_PREFIX}${i + 1}`;
+    });
+}
+
+function removeCombinerWidget(node, widget) {
+    const idx = (node.widgets || []).indexOf(widget);
+    if (idx < 0) return;
+    widget.onRemove?.();
+    node.widgets.splice(idx, 1);
+}
+
+function insertCombinerControlAtStart(node, widget) {
+    const widgets = node.widgets || [];
+    const currentIdx = widgets.indexOf(widget);
+    if (currentIdx >= 0) {
+        widgets.splice(currentIdx, 1);
+    }
+
+    const firstPartIdx = widgets.findIndex(w => w.name?.startsWith(COMBINER_PART_PREFIX));
+    const sepIdx = widgets.findIndex(w => w.name === "separator");
+    let targetIdx = 0;
+    if (firstPartIdx >= 0) {
+        targetIdx = firstPartIdx;
+    } else if (sepIdx >= 0) {
+        targetIdx = sepIdx + 1;
+    }
+    widgets.splice(targetIdx, 0, widget);
+}
+
+function redrawCombiner(node) {
+    node.setDirtyCanvas(true, true);
+}
+
+function createCombinerControlWidget(node) {
+    return {
+        name: COMBINER_CONTROL_NAME,
+        type: "custom",
+        value: null,
+        options: { serialize: false },
+        computeSize: () => [0, 26],
+        draw(ctx, _node, width, y, height) {
+            const margin = 15;
+            const gap = 8;
+            const buttonWidth = (width - margin * 2 - gap) / 2;
+            const buttonHeight = Math.max(20, height - 4);
+            const top = y + 2;
+            const labels = ["-", "+"];
+
+            ctx.save();
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.font = "14px sans-serif";
+
+            for (let i = 0; i < 2; i += 1) {
+                const left = margin + i * (buttonWidth + gap);
+                ctx.fillStyle = LiteGraph.WIDGET_BGCOLOR;
+                ctx.strokeStyle = LiteGraph.WIDGET_OUTLINE_COLOR;
+                ctx.beginPath();
+                ctx.roundRect(left, top, buttonWidth, buttonHeight, 6);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = LiteGraph.WIDGET_TEXT_COLOR;
+                ctx.fillText(labels[i], left + buttonWidth / 2, top + buttonHeight / 2);
+            }
+
+            ctx.restore();
+        },
+        mouse(event, pos) {
+            if (event.type !== "pointerdown" && event.type !== "mousedown") return false;
+            const width = node.size?.[0] || 200;
+            const isMinus = pos[0] < width / 2;
+            if (isMinus) {
+                if (removeCombinerPart(node)) {
+                    showToast(`已减少为 ${getCombinerPartCount(node)} 段`);
+                }
+            } else if (addCombinerPartWidget(node)) {
+                showToast(`已增加至 ${getCombinerPartCount(node)} 段`);
+            } else {
+                showToast(`最多 ${COMBINER_MAX_PARTS} 段`);
+            }
+            redrawCombiner(node);
+            return true;
+        },
+    };
+}
+
+function addCombinerPartWidget(node) {
+    if (getCombinerPartCount(node) >= COMBINER_MAX_PARTS) return false;
+    const name = nextCombinerPartName(node);
+    ComfyWidgets.STRING(node, name, ["STRING", { multiline: true, default: "" }], app);
+    redrawCombiner(node);
+    return true;
+}
+
+function removeCombinerPart(node) {
+    const parts = [...getCombinerPartWidgets(node), ...getCombinerPartInputs(node)]
+        .sort((a, b) => combinerPartIndex(a.name) - combinerPartIndex(b.name));
+    if (parts.length <= COMBINER_MIN_PARTS) return false;
+    const last = parts[parts.length - 1];
+    const inputIdx = (node.inputs || []).indexOf(last);
+    if (inputIdx >= 0) {
+        node.removeInput(inputIdx);
+    } else {
+        removeCombinerWidget(node, last);
+    }
+    renumberCombinerParts(node);
+    redrawCombiner(node);
+    return true;
+}
+
+function setupCombinerDynamicParts(node) {
+    for (const widget of [...(node.widgets || [])]) {
+        if (
+            (widget.type === "button" && (widget.name === "-" || widget.name === "+")) ||
+            widget.name === COMBINER_CONTROL_NAME
+        ) {
+            removeCombinerWidget(node, widget);
+        }
+    }
+
+    const parts = getCombinerPartWidgets(node).sort(
+        (a, b) => combinerPartIndex(a.name) - combinerPartIndex(b.name)
+    );
+    const valueByIndex = new Map();
+    for (const part of parts) {
+        const idx = combinerPartIndex(part.name);
+        if (idx < 1 || idx > COMBINER_MAX_PARTS) continue;
+        valueByIndex.set(idx, part.value ?? "");
+    }
+
+    let keepCount = COMBINER_MIN_PARTS;
+    for (const [idx, val] of valueByIndex.entries()) {
+        if (typeof val === "string" && val.trim()) {
+            keepCount = Math.max(keepCount, idx);
+        }
+    }
+    for (const input of getCombinerPartInputs(node)) {
+        const idx = combinerPartIndex(input.name);
+        if (idx >= 1 && idx <= COMBINER_MAX_PARTS && input.link != null) {
+            keepCount = Math.max(keepCount, idx);
+        }
+    }
+
+    for (const widget of parts) {
+        removeCombinerWidget(node, widget);
+    }
+    for (let i = 1; i <= keepCount; i += 1) {
+        const w = ComfyWidgets.STRING(
+            node,
+            `${COMBINER_PART_PREFIX}${i}`,
+            ["STRING", { multiline: true, default: "" }],
+            app
+        ).widget;
+        w.value = valueByIndex.get(i) ?? "";
+    }
+
+    for (const input of [...getCombinerPartInputs(node)]) {
+        if (combinerPartIndex(input.name) > keepCount && input.link == null) {
+            const inputIdx = (node.inputs || []).indexOf(input);
+            if (inputIdx >= 0) node.removeInput(inputIdx);
+        }
+    }
+    renumberCombinerParts(node);
+
+    const control = createCombinerControlWidget(node);
+    insertCombinerControlAtStart(node, control);
+    redrawCombiner(node);
+}
 
 app.registerExtension({
     name: "comfyui.anima.t8",
@@ -237,6 +442,8 @@ app.registerExtension({
                             showToast("已加入预览图列表，运行节点查看");
                         },
                     }));
+                } else if (nodeData.name === "AnimaPromptCombinerT8") {
+                    setTimeout(() => setupCombinerDynamicParts(self), 0);
                 } else if (nodeData.name === "AnimaSavedPromptLoaderT8") {
                     addBtn(self, "📚 风格库", () => openPromptPanel({}));
                 }
@@ -245,6 +452,15 @@ app.registerExtension({
             }
             return r;
         };
+
+        if (nodeData.name === "AnimaPromptCombinerT8") {
+            const onConfigure = nodeType.prototype.onConfigure;
+            nodeType.prototype.onConfigure = function () {
+                const r = onConfigure ? onConfigure.apply(this, arguments) : undefined;
+                setTimeout(() => setupCombinerDynamicParts(this), 0);
+                return r;
+            };
+        }
     },
 });
 
