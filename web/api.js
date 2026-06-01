@@ -71,6 +71,21 @@ export const AnimaApi = {
     pinDtag: (name, category, pinned) => _req("POST", "/dtags/pin", { name, category, pinned }),
     previewDtag: (name) => _req("GET", "/dtags/preview?name=" + encodeURIComponent(name)),
 
+    // ----- Gelbooru tags（artist / copyright / character / general） -----
+    listGtags: (params = {}) => {
+        const usp = new URLSearchParams();
+        usp.set("category", params.category || "artist");
+        if (params.q) usp.set("q", params.q);
+        if (params.page) usp.set("page", String(params.page));
+        if (params.page_size) usp.set("page_size", String(params.page_size));
+        if (params.pinned) usp.set("pinned", "1");
+        if (params.letter) usp.set("letter", params.letter);
+        return _req("GET", "/gtags?" + usp.toString());
+    },
+    refreshGtags: (category) => _req("POST", "/gtags/refresh", { category }),
+    pinGtag: (name, category, pinned) => _req("POST", "/gtags/pin", { name, category, pinned }),
+    previewGtag: (name) => _req("GET", "/gtags/preview?name=" + encodeURIComponent(name)),
+
     // ----- Civitai 模板抓取 -----
     refreshFromCivitai: (params) => _req("POST", "/civitai/refresh", params || {}),
 

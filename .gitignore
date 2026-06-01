@@ -12,6 +12,7 @@ data/*.sqlite-wal
 data/*.sqlite-shm
 data/*.db
 data/*.db-journal
+data/gelbooru_auth.json
 
 # 调试 / 测试临时文件
 _dbg.py
