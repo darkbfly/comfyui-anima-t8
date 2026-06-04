@@ -11,6 +11,7 @@ const PLACEHOLDER_SVG = "data:image/svg+xml;utf8," + encodeURIComponent(
 );
 
 const DANBOORU_POSTS_BASE = "https://danbooru.donmai.us/posts?tags=";
+const GELBOORU_POSTS_BASE = "https://gelbooru.com/index.php?page=post&s=list&tags=";
 
 function danbooruPostsUrl(tagName) {
     const t = (tagName || "").trim();
@@ -27,6 +28,54 @@ function openDanbooruTag(tagName) {
     window.open(url, "_blank", "noopener,noreferrer");
 }
 
+function gelbooruPostsUrl(tagName) {
+    const t = (tagName || "").trim();
+    if (!t) return "";
+    return GELBOORU_POSTS_BASE + encodeURIComponent(t);
+}
+
+function openGelbooruTag(tagName) {
+    const url = gelbooruPostsUrl(tagName);
+    if (!url) {
+        showToast("无法生成 Gelbooru 链接");
+        return;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+}
+
+function openBooruTag(source, tagName) {
+    if (source === "gel") openGelbooruTag(tagName);
+    else openDanbooruTag(tagName);
+}
+
+async function copyTextToClipboard(text) {
+    if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return;
+    }
+
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
+}
+
+async function copyImageToClipboard(imageUrl) {
+    if (!imageUrl) throw new Error("无图片 URL");
+    if (!window.ClipboardItem || !navigator.clipboard?.write) {
+        throw new Error("浏览器不支持复制图片，请右键另存/复制");
+    }
+    const resp = await fetch(imageUrl);
+    if (!resp.ok) throw new Error(`图片加载失败 HTTP ${resp.status}`);
+    const blob = await resp.blob();
+    const type = blob.type && blob.type.startsWith("image/") ? blob.type : "image/png";
+    await navigator.clipboard.write([new ClipboardItem({ [type]: blob })]);
+}
+
 /**
  * Tab 配置
  *  - moo  ： mooshieblob 画师库（带预览图）
@@ -34,12 +83,17 @@ function openDanbooruTag(tagName) {
  *  - dbc  ： Danbooru copyright（作品 IP）
  *  - dbk  ： Danbooru character（角色 IP）
  *  - dbm  ： Danbooru meta（风格/画质/媒介/年代等元标签）
+ *  - gba/gbc/gbk/gbg：Gelbooru 标签
  */
 const TABS = [
     { key: "dba", label: "👤 Danbooru 画师",        source: "dan", isArtist: true,  category: "artist",    hasImage: false },
     { key: "dbc", label: "📚 作品 IP",                 source: "dan", isArtist: false, category: "copyright", hasImage: false },
     { key: "dbk", label: "🧑‍🎤 角色 IP",                 source: "dan", isArtist: false, category: "character", hasImage: false },
     { key: "dbm", label: "🎭 风格·meta",            source: "dan", isArtist: false, category: "meta",      hasImage: false },
+    { key: "gba", label: "👤 Gelbooru 画师",        source: "gel", isArtist: true,  category: "artist",    hasImage: false },
+    { key: "gbc", label: "📚 Gelbooru 作品",        source: "gel", isArtist: false, category: "copyright", hasImage: false },
+    { key: "gbk", label: "🧑‍🎤 Gelbooru 角色",        source: "gel", isArtist: false, category: "character", hasImage: false },
+    { key: "gbg", label: "🏷 Gelbooru 通用",        source: "gel", isArtist: false, category: "general",   hasImage: false },
     { key: "moo", label: "🎨 画师库·mooshieblob", source: "moo", isArtist: true,  hasImage: true  },
 ];
 
@@ -63,16 +117,17 @@ export function openArtistGallery({ onApply } = {}) {
     const MAX_CONCURRENT_PREVIEW = 4;
     /** 每次 refresh 递增，可以让旧请求回来后被丢弃（避免切 tab 后赋错位） */
     let previewGen = 0;
-    function schedulePreview(name, img, gen) {
+    function schedulePreview(name, img, gen, source = "dan") {
         const job = () => {
             previewActive++;
             const t0 = Date.now();
             // 客户端超时 8s，避免某个请求挂住占用并发名额
             const timeout = new Promise((_, rej) =>
                 setTimeout(() => rej(new Error("timeout 8s")), 8000));
-            return Promise.race([AnimaApi.previewDtag(name), timeout]).then(d => {
+            const previewReq = source === "gel" ? AnimaApi.previewGtag(name) : AnimaApi.previewDtag(name);
+            return Promise.race([previewReq, timeout]).then(d => {
                 const url = (d && d.image_url) || "";
-                previewCache.set(name, url);
+                previewCache.set(`${source}:${name}`, url);
                 console.debug("[anima_t8] preview", name, url ? "OK" : "empty", (Date.now() - t0) + "ms");
                 if (gen !== previewGen) return;
                 if (url && img.isConnected) {
@@ -90,11 +145,11 @@ export function openArtistGallery({ onApply } = {}) {
                     img.classList.add("err");
                     const card = img.closest(".anima-t8-artist-card");
                     if (card) card.classList.add("err");
-                    img.title = "Danbooru 未返回预览图（可能 post_count 太少或 banned）";
+                    img.title = `${source === "gel" ? "Gelbooru" : "Danbooru"} 未返回预览图（可能 post_count 太少或 banned）`;
                 }
             }).catch((e) => {
                 console.warn("[anima_t8] preview FAIL", name, e && e.message);
-                previewCache.set(name, "");
+                previewCache.set(`${source}:${name}`, "");
                 if (gen === previewGen && img.isConnected) {
                     img.classList.add("err");
                     const card = img.closest(".anima-t8-artist-card");
@@ -117,6 +172,12 @@ export function openArtistGallery({ onApply } = {}) {
     }
     function getTab() { return TABS.find(t => t.key === currentTab); }
     function itemId(it) { return getTab().source === "moo" ? it.slug : it.tag; }
+    function previewKey(source, name) { return `${source}:${name}`; }
+    function copyTagText(item) {
+        const t = getTab();
+        const id = itemId(item);
+        return t.isArtist && id ? `@${id}` : id;
+    }
 
     const mask = el("div", { class: "anima-t8-mask" });
     const grid = el("div", { class: "anima-t8-grid", style: { padding: "4px" } });
@@ -164,6 +225,13 @@ export function openArtistGallery({ onApply } = {}) {
             return AnimaApi.listArtists({
                 q: kw, page, page_size: pageSize,
                 pinned: pinnedOnly, letter, with_image: withImageOnly,
+            });
+        }
+        if (t.source === "gel") {
+            return AnimaApi.listGtags({
+                category: t.category,
+                q: kw, page, page_size: pageSize,
+                pinned: pinnedOnly, letter,
             });
         }
         return AnimaApi.listDtags({
@@ -246,9 +314,9 @@ export function openArtistGallery({ onApply } = {}) {
                 img.src = PLACEHOLDER_SVG;
                 img.classList.add("placeholder");
             };
-        } else if (t.source === "dan") {
+        } else if (t.source === "dan" || t.source === "gel") {
             // 先查客户端缓存
-            const cached = previewCache.get(a.tag);
+            const cached = previewCache.get(previewKey(t.source, a.tag));
             if (cached) {
                 img.src = cached;
                 img.onerror = () => {
@@ -262,7 +330,7 @@ export function openArtistGallery({ onApply } = {}) {
                 img.classList.add("placeholder");
                 img.dataset.lazyName = a.tag;
                 // 直接入队（4 并发限制），不再依赖 IntersectionObserver
-                schedulePreview(a.tag, img, previewGen);
+                schedulePreview(a.tag, img, previewGen, t.source);
             }
         } else {
             img.src = PLACEHOLDER_SVG;
@@ -278,6 +346,9 @@ export function openArtistGallery({ onApply } = {}) {
                     if (t.source === "moo") {
                         await AnimaApi.pinArtist(a.slug, !isPinned);
                         a.is_pinned = !isPinned;
+                    } else if (t.source === "gel") {
+                        await AnimaApi.pinGtag(a.tag, t.category, !isPinned);
+                        a.pinned = !isPinned;
                     } else {
                         await AnimaApi.pinDtag(a.tag, t.category, !isPinned);
                         a.pinned = !isPinned;
@@ -310,12 +381,14 @@ export function openArtistGallery({ onApply } = {}) {
             // Danbooru 双击也开预览，如果还没拉到图则现拉
             card.addEventListener("dblclick", async (e) => {
                 e.preventDefault();
-                let imgUrl = a.image_url || previewCache.get(a.tag) || "";
+                let imgUrl = a.image_url || previewCache.get(previewKey(t.source, a.tag)) || "";
                 if (!imgUrl) {
                     try {
-                        const d = await AnimaApi.previewDtag(a.tag);
+                        const d = t.source === "gel"
+                            ? await AnimaApi.previewGtag(a.tag)
+                            : await AnimaApi.previewDtag(a.tag);
                         imgUrl = (d && d.image_url) || "";
-                        previewCache.set(a.tag, imgUrl);
+                        previewCache.set(previewKey(t.source, a.tag), imgUrl);
                     } catch (_) { /* ignore */ }
                 }
                 preview({ ...a, image_url: imgUrl });
@@ -324,20 +397,212 @@ export function openArtistGallery({ onApply } = {}) {
         return card;
     }
 
+    function openPostDetailDialog(a) {
+        const t = getTab();
+        if (t.source !== "dan" && t.source !== "gel") return;
+        const tagName = itemId(a);
+        if (!tagName) {
+            showToast("无 tag 名");
+            return;
+        }
+        const sourceLabel = t.source === "gel" ? "Gelbooru" : "Danbooru";
+        const POST_LIMIT = 20;
+        let detailPage = 1;
+        let hasMore = false;
+
+        const mask = el("div", { class: "anima-t8-preview-mask", style: { zIndex: "10002" } });
+        const statusEl = el("div", { class: "anima-t8-empty", style: { padding: "12px 0" } }, "加载中…");
+        const gridEl = el("div", {
+            style: {
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(96px, 1fr))",
+                gap: "8px",
+                overflow: "auto",
+                flex: "1",
+                minHeight: "120px",
+                maxHeight: "55vh",
+                padding: "4px 0",
+            },
+        });
+        const pageLabel = el("span", { style: { fontSize: "12px", color: "#5a6b80" } }, "第 1 页");
+        const prevBtn = el("button", { class: "anima-t8-btn", disabled: true }, "← 上一页");
+        const nextBtn = el("button", { class: "anima-t8-btn" }, "下一页 →");
+
+        function openSinglePostView(post) {
+            const imgUrl = post.sample_url || post.image_url || post.preview_url || "";
+            const tagsText = (post.tags || "").trim().split(/\s+/).filter(Boolean).join(", ");
+            const sm = el("div", { class: "anima-t8-preview-mask", style: { zIndex: "10003" } });
+            const closeSm = () => sm.remove();
+            sm.append(el("div", { class: "anima-t8-preview-box", style: { maxWidth: "92vw", maxHeight: "90vh" } },
+                el("div", { style: { fontWeight: "600", marginBottom: "8px" } },
+                    (post.id ? `#${post.id} · ` : "") + tagName),
+                imgUrl
+                    ? el("img", {
+                        src: imgUrl,
+                        referrerpolicy: "no-referrer",
+                        style: { maxWidth: "100%", maxHeight: "65vh", objectFit: "contain" },
+                    })
+                    : el("div", { class: "anima-t8-empty" }, "无大图"),
+                el("div", { class: "anima-t8-preview-actions" },
+                    el("button", { class: "anima-t8-btn", onclick: closeSm }, "返回"),
+                    el("button", {
+                        class: "anima-t8-btn",
+                        onclick: async () => {
+                            if (!tagsText) { showToast("该图无 tag 数据"); return; }
+                            try {
+                                await copyTextToClipboard(tagsText);
+                                showToast("已复制 tag");
+                            } catch (e) {
+                                showToast("复制失败：" + (e?.message || e));
+                            }
+                        },
+                    }, "复制 tag"),
+                    el("button", {
+                        class: "anima-t8-btn",
+                        onclick: async () => {
+                            if (!imgUrl) { showToast("无图片可复制"); return; }
+                            try {
+                                await copyImageToClipboard(imgUrl);
+                                showToast("已复制图片到剪贴板");
+                            } catch (e) {
+                                showToast(e?.message || String(e));
+                            }
+                        },
+                    }, "复制图片到剪切板"),
+                    post.source_url
+                        ? el("button", {
+                            class: "anima-t8-btn",
+                            onclick: () => window.open(post.source_url, "_blank", "noopener,noreferrer"),
+                        }, "打开原帖")
+                        : null,
+                ),
+            ));
+            sm.addEventListener("click", (e) => { if (e.target === sm) closeSm(); });
+            document.body.appendChild(sm);
+        }
+
+        function renderThumb(post) {
+            const thumbUrl = post.preview_url || post.sample_url || post.image_url || PLACEHOLDER_SVG;
+            const cell = el("div", {
+                style: {
+                    cursor: "pointer",
+                    borderRadius: "6px",
+                    overflow: "hidden",
+                    background: "#f0f4f8",
+                    aspectRatio: "3/4",
+                },
+                title: post.id ? `post #${post.id}` : tagName,
+            });
+            const img = el("img", {
+                src: thumbUrl,
+                referrerpolicy: "no-referrer",
+                style: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
+            });
+            img.onerror = () => {
+                img.onerror = null;
+                img.src = PLACEHOLDER_SVG;
+            };
+            cell.append(img);
+            cell.addEventListener("click", (e) => {
+                e.stopPropagation();
+                openSinglePostView(post);
+            });
+            return cell;
+        }
+
+        async function loadDetailPage(p) {
+            detailPage = Math.max(1, p);
+            prevBtn.disabled = detailPage <= 1;
+            nextBtn.disabled = true;
+            statusEl.textContent = "加载中…";
+            statusEl.style.display = "";
+            gridEl.replaceChildren();
+            pageLabel.textContent = `第 ${detailPage} 页`;
+            try {
+                const data = t.source === "gel"
+                    ? await AnimaApi.listGtagPosts(tagName, detailPage, POST_LIMIT)
+                    : await AnimaApi.listDtagPosts(tagName, detailPage, POST_LIMIT);
+                const items = (data && data.items) || [];
+                hasMore = !!(data && data.has_more);
+                nextBtn.disabled = !hasMore;
+                prevBtn.disabled = detailPage <= 1;
+                if (!items.length) {
+                    statusEl.textContent = detailPage === 1 ? "暂无图片" : "本页无更多图片";
+                    return;
+                }
+                statusEl.style.display = "none";
+                items.forEach(post => gridEl.append(renderThumb(post)));
+            } catch (e) {
+                statusEl.textContent = "加载失败：" + (e?.message || e);
+                showToast(statusEl.textContent);
+            }
+        }
+
+        prevBtn.addEventListener("click", () => {
+            if (detailPage > 1) loadDetailPage(detailPage - 1);
+        });
+        nextBtn.addEventListener("click", () => {
+            if (hasMore) loadDetailPage(detailPage + 1);
+        });
+
+        mask.append(el("div", {
+            class: "anima-t8-preview-box",
+            style: {
+                width: "min(720px, 92vw)",
+                maxHeight: "85vh",
+                display: "flex",
+                flexDirection: "column",
+            },
+        },
+            el("div", { style: { fontWeight: "600", marginBottom: "4px" } }, tagName),
+            el("div", { style: { fontSize: "12px", color: "#5a6b80", marginBottom: "8px" } }, sourceLabel + " · 最近图片"),
+            gridEl,
+            statusEl,
+            el("div", {
+                class: "anima-t8-preview-actions",
+                style: { justifyContent: "space-between", flexWrap: "wrap", gap: "8px" },
+            },
+                el("button", { class: "anima-t8-btn", onclick: () => mask.remove() }, "关闭"),
+                el("div", { class: "anima-t8-row", style: { gap: "6px", alignItems: "center" } },
+                    prevBtn,
+                    pageLabel,
+                    nextBtn,
+                ),
+                el("button", {
+                    class: "anima-t8-btn",
+                    onclick: () => openBooruTag(t.source, tagName),
+                }, "打开 " + sourceLabel),
+            ),
+        ));
+        mask.addEventListener("click", (e) => { if (e.target === mask) mask.remove(); });
+        document.body.appendChild(mask);
+        loadDetailPage(1);
+    }
+
     function preview(a) {
         const m = el("div", { class: "anima-t8-preview-mask" });
         const insertAndClose = () => { doApply([a]); m.remove(); };
+        const t = getTab();
+        const actions = [
+            el("button", { class: "anima-t8-btn", onclick: () => m.remove() }, "关闭"),
+        ];
+        if (t.source === "dan" || t.source === "gel") {
+            actions.push(el("button", {
+                class: "anima-t8-btn",
+                onclick: () => openPostDetailDialog(a),
+            }, "查看详情"));
+        }
+        if (t.source === "dan" || t.source === "gel") {
+            actions.push(el("button", {
+                class: "anima-t8-btn",
+                onclick: () => openBooruTag(t.source, itemId(a)),
+            }, t.source === "gel" ? "打开 Gelbooru" : "打开 Danbooru"));
+        }
+        actions.push(el("button", { class: "anima-t8-btn primary", onclick: insertAndClose }, "➜ 一键添加"));
         m.append(el("div", { class: "anima-t8-preview-box" },
             el("div", { style: { fontWeight: "600" } }, a.slug + (a.tag ? " · " + a.tag : "")),
             a.image_url ? el("img", { src: a.image_url, referrerpolicy: "no-referrer" }) : el("div", { class: "anima-t8-empty" }, "无预览图"),
-            el("div", { class: "anima-t8-preview-actions" },
-                el("button", { class: "anima-t8-btn", onclick: () => m.remove() }, "关闭"),
-                el("button", {
-                    class: "anima-t8-btn",
-                    onclick: () => openDanbooruTag(itemId(a)),
-                }, "打开 Danbooru"),
-                el("button", { class: "anima-t8-btn primary", onclick: insertAndClose }, "➜ 一键添加"),
-            ),
+            el("div", { class: "anima-t8-preview-actions" }, ...actions),
         ));
         m.addEventListener("click", (e) => { if (e.target === m) m.remove(); });
         document.body.appendChild(m);
@@ -364,6 +629,22 @@ export function openArtistGallery({ onApply } = {}) {
             mask.remove();
         },
     }, "➜ 添加选中");
+
+    const copyBtn = el("button", {
+        class: "anima-t8-btn",
+        onclick: async () => {
+            const sel = getSelected();
+            if (sel.size === 0) { showToast("请先点击选择项目"); return; }
+            const tags = Array.from(sel.values()).map(a => copyTagText(a)).filter(Boolean);
+            if (!tags.length) { showToast("没有可复制的 tag"); return; }
+            try {
+                await copyTextToClipboard(tags.join(", "));
+                showToast(`已复制 ${tags.length} 个 tag`);
+            } catch (e) {
+                showToast("复制失败：" + (e?.message || e));
+            }
+        },
+    }, "复制 tag");
 
     pageInput.addEventListener("change", () => gotoPage(pageInput.value));
     pageInput.addEventListener("keydown", (e) => {
@@ -425,6 +706,9 @@ export function openArtistGallery({ onApply } = {}) {
                 if (t.source === "moo") {
                     const r = await AnimaApi.refreshArtists();
                     showToast(`已刷新 ${r.count} 个`);
+                } else if (t.source === "gel") {
+                    const r = await AnimaApi.refreshGtags(t.category);
+                    showToast(`已刷新 ${r.count} 个`);
                 } else {
                     const r = await AnimaApi.refreshDtags(t.category);
                     showToast(`已刷新 ${r.count} 个`);
@@ -455,6 +739,7 @@ export function openArtistGallery({ onApply } = {}) {
                         },
                     }, "📌 仅固定"),
                     onlyImageBtn,
+                    copyBtn,
                     applyBtn,
                 ),
                 letterBar,

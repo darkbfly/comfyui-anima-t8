@@ -398,6 +398,70 @@ def fetch_preview_post(
     }
 
 
+def _post_item_from_gelbooru(p: Dict[str, Any]) -> Optional[Dict[str, str]]:
+    post_id = p.get("id") or ""
+    preview = _normalize_url(str(p.get("preview_url") or ""))
+    sample = _normalize_url(str(p.get("sample_url") or ""))
+    file_url = _normalize_url(str(p.get("file_url") or ""))
+    img = preview or sample or file_url
+    if not img:
+        return None
+    tags = str(p.get("tags") or "").strip()
+    return {
+        "id": str(post_id) if post_id else "",
+        "preview_url": preview,
+        "sample_url": sample or file_url or preview,
+        "image_url": sample or file_url or preview,
+        "file_url": file_url or sample or preview,
+        "source_url": f"{BASE_URL}/index.php?page=post&s=view&id={post_id}" if post_id else "",
+        "tags": tags,
+    }
+
+
+def fetch_posts_page(
+    name: str,
+    *,
+    page: int = 1,
+    limit: int = 20,
+    timeout: float = 12.0,
+    api_key: Optional[str] = None,
+    user_id: Optional[str] = None,
+) -> List[Dict[str, str]]:
+    """按 tag 分页拉 Gelbooru 帖子列表。返回原始 URL 字段。"""
+    tag = (name or "").strip()
+    page = max(1, int(page or 1))
+    limit = max(1, min(40, int(limit or 20)))
+    if not tag:
+        return []
+
+    api_key, user_id = _resolve_auth(api_key, user_id)
+    pid = (page - 1) * limit
+    params = {
+        "page": "dapi",
+        "s": "post",
+        "q": "index",
+        "json": 1,
+        "limit": limit,
+        "pid": pid,
+        "tags": tag,
+        "api_key": api_key,
+        "user_id": user_id,
+    }
+    try:
+        data = _http_get_json(_build_url(params), timeout=timeout)
+    except GelbooruAuthError as e:
+        print(f"[anima_t8] gelbooru posts DAPI unauthorized: {e}")
+        return []
+
+    rows = _extract_records(data, "post")
+    items: List[Dict[str, str]] = []
+    for p in rows:
+        item = _post_item_from_gelbooru(p)
+        if item:
+            items.append(item)
+    return items
+
+
 def fetch_preview_from_html(name: str, *, timeout: float = 10.0) -> Dict[str, str]:
     tag = (name or "").strip()
     if not tag:

@@ -209,6 +209,66 @@ class DanbooruManager:
                     _PREVIEW_CACHE.pop(k, None)
         return result
 
+    def _proxy_image(self, raw_url: str, path_prefix: str = "/anima_t8/dtags/image") -> str:
+        if not raw_url:
+            return ""
+        return path_prefix + "?u=" + urllib.parse.quote(raw_url, safe="")
+
+    def _post_item_from_danbooru(self, p: dict) -> Optional[Dict[str, Any]]:
+        preview_raw = (
+            p.get("preview_file_url")
+            or p.get("large_file_url")
+            or p.get("file_url")
+            or ""
+        )
+        if not preview_raw:
+            return None
+        sample_raw = p.get("large_file_url") or p.get("file_url") or preview_raw
+        post_id = p.get("id")
+        tags = (p.get("tag_string") or "").strip()
+        return {
+            "id": str(post_id) if post_id is not None else "",
+            "preview_url": self._proxy_image(preview_raw),
+            "sample_url": self._proxy_image(sample_raw),
+            "image_url": self._proxy_image(sample_raw),
+            "source_url": f"{DANBOORU_BASE}/posts/{post_id}" if post_id else "",
+            "tags": tags,
+        }
+
+    def fetch_posts(self, name: str, page: int = 1, limit: int = 20) -> Dict[str, Any]:
+        """按 tag 分页拉 Danbooru 最近帖子列表。"""
+        name = (name or "").strip()
+        page = max(1, int(page or 1))
+        limit = max(1, min(40, int(limit or 20)))
+        if not name:
+            return {"items": [], "page": page, "limit": limit, "has_more": False}
+
+        tag_q = urllib.parse.quote(name, safe=":/_")
+        url = f"{DANBOORU_BASE}/posts.json?tags={tag_q}&limit={limit}&page={page}"
+        items: List[Dict[str, Any]] = []
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "AnimaForge/1.0"})
+            ctx = ssl.create_default_context()
+            with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
+                raw = resp.read().decode("utf-8", errors="ignore")
+            data = json.loads(raw) if raw else []
+            if isinstance(data, list):
+                for p in data:
+                    if not isinstance(p, dict):
+                        continue
+                    item = self._post_item_from_danbooru(p)
+                    if item:
+                        items.append(item)
+        except Exception as e:
+            print(f"[anima_t8] danbooru fetch_posts failed name={name} page={page}: {e}")
+
+        return {
+            "items": items,
+            "page": page,
+            "limit": limit,
+            "has_more": len(items) >= limit,
+        }
+
     # ---------- Pin ----------
     def set_pinned(self, name: str, category, pinned: bool) -> bool:
         category = _normalize_category(category)

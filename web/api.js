@@ -70,6 +70,13 @@ export const AnimaApi = {
     refreshDtags: (category) => _req("POST", "/dtags/refresh", { category }),
     pinDtag: (name, category, pinned) => _req("POST", "/dtags/pin", { name, category, pinned }),
     previewDtag: (name) => _req("GET", "/dtags/preview?name=" + encodeURIComponent(name)),
+    listDtagPosts: (name, page = 1, limit = 20) => {
+        const usp = new URLSearchParams();
+        usp.set("name", name);
+        usp.set("page", String(page));
+        usp.set("limit", String(limit));
+        return _req("GET", "/dtags/posts?" + usp.toString());
+    },
 
     // ----- Gelbooru tags（artist / copyright / character / general） -----
     listGtags: (params = {}) => {
@@ -85,6 +92,13 @@ export const AnimaApi = {
     refreshGtags: (category) => _req("POST", "/gtags/refresh", { category }),
     pinGtag: (name, category, pinned) => _req("POST", "/gtags/pin", { name, category, pinned }),
     previewGtag: (name) => _req("GET", "/gtags/preview?name=" + encodeURIComponent(name)),
+    listGtagPosts: (name, page = 1, limit = 20) => {
+        const usp = new URLSearchParams();
+        usp.set("name", name);
+        usp.set("page", String(page));
+        usp.set("limit", String(limit));
+        return _req("GET", "/gtags/posts?" + usp.toString());
+    },
 
     // ----- Civitai 模板抓取 -----
     refreshFromCivitai: (params) => _req("POST", "/civitai/refresh", params || {}),

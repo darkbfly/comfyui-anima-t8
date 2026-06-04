@@ -413,6 +413,24 @@ def register_routes():
             traceback.print_exc()
             return _err("预览图获取失败：" + str(e), 500)
 
+    @routes.get("/anima_t8/dtags/posts")
+    async def list_dtag_posts(request: web.Request):
+        name = (request.query.get("name") or "").strip()
+        if not name:
+            return _err("name required")
+        try:
+            page = int(request.query.get("page", "1") or 1)
+            limit = int(request.query.get("limit", "20") or 20)
+            loop = request.app.loop
+            data = await loop.run_in_executor(
+                None, lambda: get_danbooru_manager().fetch_posts(name, page=page, limit=limit)
+            )
+            return _ok(data)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return _err("Danbooru 帖子列表获取失败：" + str(e), 500)
+
     # ---------- Gelbooru tags（artist / copyright / character / general） ----------
     _gel_bg_fetch_running: dict = {}
 
@@ -536,6 +554,24 @@ def register_routes():
             import traceback
             traceback.print_exc()
             return _err("Gelbooru 预览图获取失败：" + str(e), 500)
+
+    @routes.get("/anima_t8/gtags/posts")
+    async def list_gtag_posts(request: web.Request):
+        name = (request.query.get("name") or "").strip()
+        if not name:
+            return _err("name required")
+        try:
+            page = int(request.query.get("page", "1") or 1)
+            limit = int(request.query.get("limit", "20") or 20)
+            loop = request.app.loop
+            data = await loop.run_in_executor(
+                None, lambda: get_gelbooru_manager().fetch_posts(name, page=page, limit=limit)
+            )
+            return _ok(data)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return _err("Gelbooru 帖子列表获取失败：" + str(e), 500)
 
     # ---------- 片段收藏 ----------
     @routes.get("/anima_t8/snippets")

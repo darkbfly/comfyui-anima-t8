@@ -14,6 +14,7 @@ from core.db import get_db
 from api.gelbooru_client import (
     CATEGORY_NAMES,
     autocomplete_tags,
+    fetch_posts_page,
     fetch_preview_post,
     fetch_tags,
     normalize_category,
@@ -164,6 +165,45 @@ class GelbooruManager:
                 for k in list(_PREVIEW_CACHE.keys())[:2048]:
                     _PREVIEW_CACHE.pop(k, None)
         return result
+
+    def fetch_posts(self, name: str, page: int = 1, limit: int = 20) -> Dict[str, Any]:
+        """按 tag 分页拉 Gelbooru 最近帖子，图片 URL 走同源代理。"""
+        name = (name or "").strip()
+        page = max(1, int(page or 1))
+        limit = max(1, min(40, int(limit or 20)))
+        if not name:
+            return {"items": [], "page": page, "limit": limit, "has_more": False}
+
+        raw_items = fetch_posts_page(name, page=page, limit=limit)
+        items: List[Dict[str, Any]] = []
+        for p in raw_items:
+            preview_raw = p.get("preview_url") or ""
+            sample_raw = p.get("sample_url") or p.get("file_url") or preview_raw
+            image_raw = p.get("image_url") or sample_raw or preview_raw
+            items.append({
+                "id": p.get("id", ""),
+                "preview_url": (
+                    "/anima_t8/gtags/image?u=" + urllib.parse.quote(preview_raw, safe="")
+                    if preview_raw else ""
+                ),
+                "sample_url": (
+                    "/anima_t8/gtags/image?u=" + urllib.parse.quote(sample_raw, safe="")
+                    if sample_raw else ""
+                ),
+                "image_url": (
+                    "/anima_t8/gtags/image?u=" + urllib.parse.quote(image_raw, safe="")
+                    if image_raw else ""
+                ),
+                "source_url": p.get("source_url", ""),
+                "tags": p.get("tags", ""),
+            })
+
+        return {
+            "items": items,
+            "page": page,
+            "limit": limit,
+            "has_more": len(items) >= limit,
+        }
 
     def set_pinned(self, name: str, category, pinned: bool) -> bool:
         category = normalize_category(category)
